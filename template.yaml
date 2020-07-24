@@ -1,0 +1,457 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  greengrass-ml-sample-app
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 10
+
+Parameters:
+  GreengrassFunctionAlias:
+    Description: Enter the function alias of the greengrass function
+    Type: String
+  CoreName:
+    Description: Green Core name to be created. A "Thing" with be created with _Core appended to the name
+    Type: String
+    Default: gg_cfn
+  SecurityAccessCIDR:
+    Description: CIDR block to limit inbound access for only SSH
+    Type: String
+    Default: '0.0.0.0/0'
+  myKeyPair:
+    Description: Amazon EC2 Key Pair for accessing Greengrass Core instance
+    Type: "AWS::EC2::KeyPair::KeyName"
+
+
+Mappings:
+  # If Greengrass becomes available in other regions, add the x86 AMI Id for the
+  # image description:  "Ubuntu Server 16.04 LTS (HVM), SSD Volume Type"
+  RegionMap: 
+    us-east-1: 
+      "HVM": "ami-0565af6e282977273"
+    us-west-2: 
+      "HVM": "ami-08692d171e3cf02d6"
+    # ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20200611
+    eu-west-1: 
+      "HVM": "ami-089cc16f7f08c4457"
+    eu-central-1: 
+      "HVM": "ami-05af84768964d3dc0"
+    ap-northeast-1: 
+      "HVM": "ami-06c43a7df16e8213c"
+    ap-southeast-2: 
+      "HVM": "ami-0789a5fb42dcccc10"
+
+Resources:
+  #############################################################################
+  # GREENGRASS RESOURCES SECTION
+  # This section contains all the Greengrass related resources
+  #############################################################################
+  GreengrassGroup:
+    Type: AWS::Greengrass::Group
+    Properties:
+      Name: !Ref CoreName
+      RoleArn: !GetAtt GreengrassResourceRole.Arn
+      InitialVersion:
+        CoreDefinitionVersionArn: !Ref GreengrassCoreDefinitionVersion
+        FunctionDefinitionVersionArn: !GetAtt FunctionDefinition.LatestVersionArn
+        SubscriptionDefinitionVersionArn: !GetAtt SubscriptionDefinition.LatestVersionArn
+        ResourceDefinitionVersionArn: !Ref GreengrassResourceDefinitionVersion
+        # Other Greengrass resources that can be included in a group
+        # not used in this example
+        #
+        # DeviceDefinitionVersionArn: !Ref ExampleDeviceDefinitionVersion
+        # LoggerDefinitionVersionArn: !Ref ExampleLoggerDefinitionVersion
+        # 
+        # ConnectorDefinitionVersionArn: !Ref ExampleConnectorDefinitionVersion
+  GreengrassCoreDefinition:
+    Type: AWS::Greengrass::CoreDefinition
+    Properties:
+      # use CoreName + "_Core" as "thingName"
+      Name: !Join ["_", [!Ref CoreName, "Core"] ]
+  GreengrassCoreDefinitionVersion:
+    # Example of using GreengrassCoreDefinition referring to this
+    # "Version" resource
+    Type: AWS::Greengrass::CoreDefinitionVersion
+    Properties:
+      CoreDefinitionId: !Ref GreengrassCoreDefinition
+      Cores:
+        - Id: !Join ["_", [!Ref CoreName, "Core"] ]
+          ThingArn: !Join
+                      - ":"
+                      - - "arn:aws:iot"
+                        - !Ref AWS::Region
+                        - !Ref AWS::AccountId
+                        - !Join
+                          - "/"
+                          - - "thing"
+                            - !Join ["_", [!Ref CoreName, "Core"] ]
+          CertificateArn: !Join
+                            - ":"
+                            - - "arn:aws:iot"
+                              - !Ref AWS::Region
+                              - !Ref AWS::AccountId
+                              - !Join
+                                - "/"
+                                - - "cert"
+                                  - !GetAtt IoTThing.certificateId
+          SyncShadow: "false"
+  ImageClassifierFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      #FunctionName: ImageClassifier
+      AutoPublishAlias: !Ref GreengrassFunctionAlias
+      CodeUri: lambda/image_classifier/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+
+  FunctionDefinition:
+    # Example of using "InitialVersion" to not have to reference a separate
+    # "Version" resource
+    Type: 'AWS::Greengrass::FunctionDefinition'
+    Properties:
+      Name: FunctionDefinition
+      InitialVersion:
+        DefaultConfig:
+          Execution:
+            IsolationMode: GreengrassContainer
+        Functions:
+          - Id: !Join ["_", [!Ref CoreName, "sample"] ]
+            FunctionArn: !Ref ImageClassifierFunction.Version
+            FunctionConfiguration:
+              Pinned: 'true'
+              Executable: index.py
+              MemorySize: '65536'
+              Timeout: '300'
+              EncodingType: binary
+              Environment:
+                Variables:
+                  CORE_NAME: !Ref CoreName
+                AccessSysfs: 'false'
+                Execution:
+                  IsolationMode: GreengrassContainer
+                  RunAs:
+                    Uid: '1'
+                    Gid: '10'
+  SubscriptionDefinition:
+    Type: 'AWS::Greengrass::SubscriptionDefinition'
+    Properties:
+      Name: SubscriptionDefinition
+      InitialVersion:
+        # Example of one-to-many subscriptions in single definition version
+        Subscriptions:
+          - Id: Subscription1
+            Source: 'cloud'
+            Subject: !Join
+                        - "/"
+                        - - !Ref CoreName
+                          - "in"
+            Target: !Ref ImageClassifierFunction.Version
+          - Id: Subscription2
+            Source: !Ref ImageClassifierFunction.Version
+            Subject: !Join
+                        - "/"
+                        - - !Ref CoreName
+                          - "out"
+            Target: 'cloud'
+          - Id: Subscription3
+            Source: !Ref ImageClassifierFunction.Version
+            Subject: !Join
+                        - "/"
+                        - - !Ref CoreName
+                          - "telem"
+            Target: 'cloud'
+  GreengrassResourceDefinition:
+    Type: 'AWS::Greengrass::ResourceDefinition'
+    Properties:
+      Name: GreengrassResourceDefinition
+  GreengrassResourceDefinitionVersion:
+    Type: 'AWS::Greengrass::ResourceDefinitionVersion'
+    Properties:
+      ResourceDefinitionId: !Ref GreengrassResourceDefinition
+      Resources:
+        - Id: ResourceId1
+          Name: S3MachineLearningModelResourceData
+          ResourceDataContainer:
+            S3MachineLearningModelResourceData:
+              S3Uri: 'https://greengrass-deployment-828266890613.s3-eu-west-1.amazonaws.com/models/20200716-083759/model.tar.gz'
+              DestinationPath: /mlModels/imageclassifier
+  
+
+  #############################################################################
+  # SUPPORTING RESOURCES SECTION
+  # This section contains all the resources that support the Greengrass
+  # section above. The VPC and EC2 instance to run Greengrass core software, the
+  # AWS IoT Thing, Certificate, and IoT Policy required for the Greengrass
+  # Core definition, and finally custom resources to assist with CloudFormation
+  # stack setup and teardown.
+  #############################################################################
+
+  # Supporting resources from VPC, EC2 Instance, AWS IoT Core
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: 172.31.0.0/24
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+  VPCGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  SubnetAPublic:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      # Use returned AZ to ensure instance type available
+      #AvailabilityZone: !GetAtt InstanceAZ.AvailabilityZone
+      CidrBlock: 172.31.0.0/24
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+  RouteTablePublic:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+  RouteTableAssociationAPublic:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPublic
+      RouteTableId: !Ref RouteTablePublic
+  RouteTablePublicInternetRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTablePublic
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow inbound SSH access
+      VpcId:
+        Ref: VPC
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: !Ref SecurityAccessCIDR
+
+  GreengrassInstance:
+    Type: "AWS::EC2::Instance"
+    DependsOn: GreengrassGroup
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", HVM]
+      InstanceType: t3.micro
+      KeyName: !Ref myKeyPair
+      SecurityGroupIds: !Split [",", !GetAtt InstanceSecurityGroup.GroupId]
+      Tags:
+       - Key: Name
+         Value: !Join ["-", [ "Greengrass Core Blog ", !Ref CoreName] ]
+      SubnetId: !Ref SubnetAPublic
+      UserData:
+        # All the steps to install dependencies and create the specific
+        # Greengrass core config and certificate/private key files.
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          export DEBIAN_FRONTEND=noninteractive
+          apt update -y
+          apt upgrade -y
+          apt install python-minimal python-pip -y
+          pip install greengrasssdk
+          adduser --system ggc_user
+          groupadd --system ggc_group
+
+          # Install Greengrass via APT repository (suitable for testing)
+          wget -O aws-iot-greengrass-keyring.deb https://d1onfpft10uf5o.cloudfront.net/greengrass-apt/downloads/aws-iot-greengrass-keyring.deb
+          dpkg -i aws-iot-greengrass-keyring.deb
+          echo "deb https://dnw9lb6lzp2d8.cloudfront.net stable main" | sudo tee /etc/apt/sources.list.d/greengrass.list
+          apt update -y
+          apt install aws-iot-greengrass-core python3.7 -y
+          echo -n "${IoTThing.certificatePem}" > /greengrass/certs/${IoTThing.certificateId}.pem
+          echo -n "${IoTThing.privateKey}" > /greengrass/certs/${IoTThing.certificateId}.key
+          cd /greengrass/config
+          # Create Greengrass config file from inputs and parameters
+          # Can be enhanced to manage complete installation of Greengrass and credentials
+          cat <<EOT > config.json          
+          {
+            "coreThing" : {
+              "caPath" : "root.ca.pem",
+              "certPath" : "${IoTThing.certificateId}.pem",
+              "keyPath" : "${IoTThing.certificateId}.key",
+              "thingArn" : "arn:aws:iot:${AWS::Region}:${AWS::AccountId}:thing/${CoreName}_Core",
+              "iotHost" : "${IoTThing.iotEndpoint}",
+              "ggHost" : "greengrass-ats.iot.${AWS::Region}.amazonaws.com"
+            },
+            "runtime" : {
+              "cgroup" : {
+                "useSystemd" : "yes"
+              }
+            },
+            "managedRespawn" : false,
+            "crypto" : {
+              "principals" : {
+                "SecretsManager" : {
+                  "privateKeyPath" : "file:///greengrass/certs/${IoTThing.certificateId}.key"
+                },
+                "IoTCertificate" : {
+                  "privateKeyPath" : "file:///greengrass/certs/${IoTThing.certificateId}.key",
+                  "certificatePath" : "file:///greengrass/certs/${IoTThing.certificateId}.pem"
+                }
+              },
+              "caPath" : "file:///greengrass/certs/root.ca.pem"
+            }
+          }
+          EOT
+
+          cd /greengrass/certs/
+          wget -O root.ca.pem https://www.amazontrust.com/repository/AmazonRootCA1.pem
+          # cd /tmp
+          # # Create Greengrass systemd file - thanks to: https://gist.github.com/matthewberryman/fa21ca796c3a2e0dfe8224934b7b055c
+          # cat <<EOT > greengrass.service
+          # [Unit]
+          # Description=greengrass daemon
+          # After=network.target
+
+          # [Service]
+          # ExecStart=/greengrass/ggc/core/greengrassd start
+          # Type=simple
+          # RestartSec=2
+          # Restart=always
+          # User=root
+          # PIDFile=/var/run/greengrassd.pid
+
+          # [Install]
+          # WantedBy=multi-user.target
+          # EOT
+          # cp greengrass.service /etc/systemd/system
+          systemctl enable greengrass.service
+          reboot
+
+  IoTThing:
+    # Resource creates thing, certificate key pair, and IoT policy
+    Type: Custom::IoTThing
+    Properties:
+      ServiceToken: !GetAtt CreateThingFunction.Arn
+      ThingName: !Join ["_", [!Ref CoreName, "Core"] ]
+
+  CreateThingFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      Description: Create thing, certificate, and policy, return cert and private key
+      CodeUri: lambda/gg_create_thing/
+      Handler: index.handler
+      Runtime: python3.7
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 60
+
+  GroupDeploymentReset:
+    # Allows for deletion of Greengrass group if the deployment status is not
+    # reset manually via the console or API
+    Type: Custom::GroupDeploymentReset
+    DependsOn: GreengrassGroup
+    Properties:
+      ServiceToken: !GetAtt GroupDeploymentResetFunction.Arn
+      Region: !Ref "AWS::Region"
+      ThingName: !Join ["_", [!Ref CoreName, "Core"] ]
+
+  GroupDeploymentResetFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: lambda/gg_deployment_reset
+      Handler: index.handler
+      Runtime: python3.7
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 60
+      Environment:
+        Variables:
+          STACK_NAME: !Ref "AWS::StackName"
+    # Roles
+  LambdaExecutionRole:
+    # Role used by CloudFormation created Lambda functions, used by the custom
+    # resource functions to perform their objectives.
+    # Overly permissive for iot:* and greengrass:* to reduce Statement complexity
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - iot:*
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - greengrass:*
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - ec2:DescribeReservedInstancesOfferings
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - iam:CreateRole
+            - iam:AttachRolePolicy
+            - iam:DetachRolePolicy
+            - iam:GetRole
+            - iam:DeleteRole
+            - iam:PassRole
+            Resource: !Join ["", ["arn:aws:iam::", !Ref "AWS::AccountId", ":role/greengrass_cfn_", !Ref "AWS::StackName", "_ServiceRole"] ]
+  GreengrassResourceRole:
+    # Role for deployed Lambda functions to a Greengrass core to call other
+    # AWS services directly
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: greengrass.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - iot:*
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - s3:*
+            Resource: "*"
+
+Outputs:
+  # Emit values needed for deployment status (e.g., where to SSH to)
+  EC2IPAddress:
+    Description: "EC2 Instance Public IP Address"
+    Value: !GetAtt GreengrassInstance.PublicIp
+  ImageClassifierFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt ImageClassifierFunction.Arn
+
