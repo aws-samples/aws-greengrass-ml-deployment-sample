@@ -1,54 +1,110 @@
-# Deployment options for ML models on an AWS IoT Greengrass device
+# Deployment and maintanance of ML libraries on an AWS IoT Greengrass device
 
-This sample describes and compares various options for a deployment of ML models on the AWS IoT Greengrass device. It also includes AWS Cloud Formation templates for selected options.
+This sample provides an overview of options and reusable components for deployment&maintanance of ML models on an AWS IoT Greengrass device.
 
 The code examples assumes usage of a Python as a programming language for performing inference.
 
-## Purpose of this sample
+## Introduction
 
-AWS IoT Greengrass supports local ML inference by providing three capabilites:
+With AWS IoT Greengrass, you can [perform machine learning (ML) inference at the edge](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) on locally generated data using cloud-trained models. You benefit from the low latency and cost savings of running local inference, yet still take advantage of cloud computing power for training models and complex processing.
 
-- Deploy ML models by using "Ml resources"
-- Deploying inference logic, with two options:
-  - Deploy AWS pre-built ML connectors with inference logic:
-    - Connector 1
-    - Connector 2
-  - Deploying custom-built AWS Lambda functions with inference logic
+[AWS IoT Greengrass](https://aws.amazon.com/greengrass/) supports performing a ML inference at the edge by providing three capabilites:
 
-When deploying custom-built AWS Lambda functions with inference logic, two components must be available on a Greengrass devcie:
+- Deploy ML models by using ["ML resources"](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html)
+- Deplo an inference logic, with two options:
+  - Deploy [AWS pre-built ML connectors](https://docs.aws.amazon.com/greengrass/latest/developerguide/connectors-list.html) with an inference logic
+  - Deploying custom-built [AWS Lambda functions](https://docs.aws.amazon.com/greengrass/latest/developerguide/access-ml-resources.html) with inference logic
 
-- Component 1. A set of ML libraries neccessary for inference execution (e.g. Tensorflow, Keras, Numpy, Pandas, scipy, soundfile).
-- Component 2. Inference logic, i.e. commands to calling APIs of ML libraries and interpretation of these commands in context of a specific use-case
+When deploying custom-built AWS Lambda functions for performing an ML inference, two components must be deployed and maintaned on a Greengrass devcie:
+
+- Component 1: A set of ML libraries neccessary for inference execution (e.g. Tensorflow, Keras, Numpy, Pandas, scipy, soundfile).
+- Component 2: Inference logic, i.e. commands to calling APIs of ML libraries and interpretation of these commands in context of a specific use-case
 
 Comparison of both components shows differencies regarding storage size and update demand frequency:
-| Part | Size | Update demand frequency |
+| Part | Typical size | Update demand frequency |
 | ------------------ | ---------- | -------------------------------- |
-| 1. ML Libraries | 10 _ X Kb | low (for new libraries releases) |
-| 2. Inference logic | 100 _ X Mb | high |
+| 1. ML Libraries | up to several Gb | low (for new libraries releases) |
+| 2. Inference logic | Kb | high |
 
-Typical requirements here are:
+Based on this observation, a frequent requirement is an ability to decouple deployment of the inference logic from the deployment of ML libraries, while keeping existing cloud-based toolchain for management for both inference logic and ML libraries.
 
-- Ability to decouple deployment of the inference logic from the deployment of ML libraries.
-- Ability to have the benefits of Cloud-based deployment both for inference logic and for the deployment of ML libraries.
+This document describes options for an implementation of this requirement.
 
-This document describes options for implementation of this requirement.
+## Options
+
+This chapter provides an overview of available options and compares them.
+
+### 1. Using "Machine learning resources" capability of AWS IoT Greengrass to deploy ML libraries
+
+In AWS IoT Greengrass, ["Machine learning resources"](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) represent cloud-trained inference models that are deployed to an AWS IoT Greengrass core. AWS IoT Greengrass supports Amazon SageMaker and Amazon S3 model sources for machine learning resources.
+
+In this option, we are making use of "Machine learning resources" with Amazon S3 as a source to deploy ML libraries instead of ML models.
+
+### Implementation steps
+
+For a sake of better understanding, the following explanation describes neccessary steps in AWS management console. Automation possibilities will be described in next chapters.
+
+#### Part 1: preparing a ML library deployment
+
+1. Store the ML libraries to be used for ML inference as a .zip file in an Amazon S3 bucket of your choice. We will use a name "mllibraries.zip" in this example.
+   **Please note that the libraries should be compatible to a Greengrass device.**
+
+#### Part 2: Configuring machine learning resource
+
+1. Switch to a relevant AWS IoT Greengrass group and click on "Resources" section
+
+2. Choose "Machine learning" and click on "Add a machine learning resource"
+
+3. Select resource name, for example `mllibs``
+
+4. For "model source", select a path to an Amazon S3 bucket and a .zip file you used in step 1.
+
+5. For "local path" please select a path which your AWS Lambda ML inference function will be using to access the deployed ML libraries, for example `/mllibs`
+
+6. For "Lambda function affiliations", please select an AWS Lambda ML inference function which needs the ML libraries in "mllibraries.zip"
+
+7. Click on save
+
+#### Part 3: Configuring AWS Lambds function in a Greengrass group
+
+1. Switch to a relevant AWS IoT Greengrass group and click on "Lambdas" section
+2. Select an AWS Lambda ML inference function which needs the ML libraries in "mllibraries.zip"
+3. In section "Environment variables", set a variable PYTHONPATH to a value `/mllibs` (or any other value you chose in step 5 of part 2)
+
+#### Part 4: Deploy a Greengrass group
+
+1. Redeploy a Greengrass group.
+2. Now your AWS Lambda ML inference function is able to load the neccessary ML libraries.
+
+### Technical background
+
+The content of "mllibraries.zip" file will be transferred from an Amazon S3 bucket to your Greengrass devices and unpackaged in a local directory. As the AWS Lambda ML inference function starts, AWS IoT Greengrass core will mount the local directory with unpackaged "mllibraries.zip" to a `/mllibs` directory in Lambdas's container
+
+Python interpreter uses environment variable PYTHONPATH to look for available libraries. If you configure PYTHONPATH in GG Group Lambda config, it‘s prepended to an actual PYTHONPATH, e.g. if PYTHONPATH=„/mllibs“ in GG group Lambda settings the PYTHONPATH is „/mllibs:/lamba“ during Lambda execution
+
+#### Limitations
+
+- Works only for contanerized AWS Lambda functions
+
+### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+
+### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+
+### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+
+### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+
+### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+
+### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+
+### 2. Install ML libs on OS level in „/abc/libs“, create an volume ressource in GG Group pointing to „/abc/libs“
 
 ## Technical background
 
 ### PYTHONPATH environment variable on AWS IoT Greengrass Lambda
 
-Python interpreter uses environment variable PYTHONPATH to look for libs
-If you configure PYTHONPATH in GG Group Lambda config, it‘s prepended to an actual PYTHONPATH, e.g.
-if PYTHONPATH=„abc“ in GG group Lambda settings
-the PYTHONPATH is „abc:/lamba“ during Lambda execution
-
-## Solution options
-
-### 1. Configure ML libs as a ML ressource in a GG Group
-
-???What is a solution non-contanerized GG Lambdas???
-
-### 2. Install ML libs on OS level in „/abc/libs“, create an volume ressource in GG Group pointing to „/abc/libs“
+P
 
 ## Comparison
 
