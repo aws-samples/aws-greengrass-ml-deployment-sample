@@ -21,10 +21,11 @@ When deploying custom-built AWS Lambda functions for performing an ML inference,
 - Component 2: Inference logic, i.e. commands to calling APIs of ML libraries and interpretation of these commands in context of a specific use-case
 
 Comparison of both components shows differencies regarding storage size and update demand frequency:
-| Part | Typical size | Update demand frequency |
-| ------------------ | ---------- | -------------------------------- |
-| 1. ML Libraries | up to several Gb | low (for new libraries releases) |
-| 2. Inference logic | Kb | high |
+
+| Part               | Typical size     | Update demand frequency          |
+| ------------------ | ---------------- | -------------------------------- |
+| 1. ML Libraries    | up to several Gb | low (for new libraries releases) |
+| 2. Inference logic | Kb               | high                             |
 
 Based on this observation, a frequent requirement is an ability to decouple deployment of the inference logic from the deployment of ML libraries, while keeping existing cloud-based toolchain for management for both inference logic and ML libraries.
 
@@ -34,7 +35,7 @@ This document describes options for an implementation of this requirement.
 
 This chapter provides an overview of available options and compares them.
 
-### 1. Using "Machine learning resources" capability of AWS IoT Greengrass to deploy ML libraries
+### 1. Using "Machine learning resources" of AWS IoT Greengrass to deploy ML libraries
 
 In AWS IoT Greengrass, ["Machine learning resources"](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) represent cloud-trained inference models that are deployed to an AWS IoT Greengrass core. AWS IoT Greengrass supports Amazon SageMaker and Amazon S3 model sources for machine learning resources.
 
@@ -47,6 +48,7 @@ For a sake of better understanding, the following explanation describes neccessa
 #### Part 1: preparing a ML library deployment
 
 1. Store the ML libraries to be used for ML inference as a .zip file in an Amazon S3 bucket of your choice. We will use a name "mllibraries.zip" in this example.
+
    **Please note that the libraries should be compatible to a Greengrass device.**
 
 #### Part 2: Configuring machine learning resource
@@ -55,7 +57,7 @@ For a sake of better understanding, the following explanation describes neccessa
 
 2. Choose "Machine learning" and click on "Add a machine learning resource"
 
-3. Select resource name, for example `mllibs``
+3. Select resource name, for example `mllibs`
 
 4. For "model source", select a path to an Amazon S3 bucket and a .zip file you used in step 1.
 
