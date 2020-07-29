@@ -31,11 +31,7 @@ Based on this observation, a frequent requirement is an ability to decouple depl
 
 This document describes options for an implementation of this requirement.
 
-## Options
-
-This chapter provides an overview of available options and compares them.
-
-### 1. Using "Machine learning resources" of AWS IoT Greengrass to deploy ML libraries
+## Option 1. Using "Machine learning resources" of AWS IoT Greengrass to deploy ML libraries
 
 In AWS IoT Greengrass, ["Machine learning resources"](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) represent cloud-trained inference models that are deployed to an AWS IoT Greengrass core. AWS IoT Greengrass supports Amazon SageMaker and Amazon S3 model sources for machine learning resources.
 
