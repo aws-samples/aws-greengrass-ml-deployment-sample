@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Build template to upload model and dependencies
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: The bucket to be created and use to upload the model
+
+Resources:
+  DeploymentArtifactBucket:
+    Type: AWS::S3::Bucket
+
+    DeletionPolicy: Delete
+    Properties:
+      AccessControl: Private
+      BucketName: !Ref BucketName
+  CodeBuildServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - codebuild.amazonaws.com
+  CodeBuildServicePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CodeBuildServicePolicy
+      Roles:
+        - !Ref CodeBuildServiceRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "arn:aws:logs:*:*:*"
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource:
+              - "*"
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: PackageModel
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+          ArtifactIdentifier: String
+          Location: !Ref DeploymentArtifactBucket
+          Name: model-package.zip
+          Packaging: ZIP
+          Path: model-packages
+          Type: S3
+      Environment:
+        Type: linuxContainer
+        # ComputeType options: BUILD_GENERAL1_SMALL, BUILD_GENERAL1_MEDIUM, BUILD_GENERAL1_LARGE
+        ComputeType: BUILD_GENERAL1_SMALL
+        # Run `aws codebuild list-curated-environment-images` for a complete list of images provided.
+        Image: aws/codebuild/standard:4.0
+        EnvironmentVariables:
+          - Name: BUILD_ARTIFACT_BUCKET
+            Value: !Ref DeploymentArtifactBucket
+      Source:
+        Type: S3
+        Location: !Sub '${BucketName}/codebuild/'
+      TimeoutInMinutes: 10

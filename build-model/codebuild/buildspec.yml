@@ -1,0 +1,22 @@
+  
+version: 0.2
+
+phases:
+  install:
+    commands:
+      - echo "install"
+      - pip install tensorflow
+  build:
+    commands:
+      - python build_model_bundle.py
+      - pip3 install https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp36-cp36m-linux_x86_64.whl -t dependencies
+      - mkdir -p model_package
+      - mv labels.txt model.tflite dependencies model_package
+      - tar -zcvf model-package.tar.gz model_package
+      - timestampStr=$(date +%D-%T)
+      - aws s3 cp model-package.tar.gz s3://${BUILD_ARTIFACT_BUCKET}/models/image-net-tf-lite-${timestampStr}/model.tar.gz
+    artifacts:
+      files:
+        - '**/*'
+      base-directory: 'model_package'
+      
