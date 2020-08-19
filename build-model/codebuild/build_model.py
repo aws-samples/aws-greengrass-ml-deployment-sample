@@ -7,9 +7,6 @@ import urllib, json
 IMG_SIZE = 224
 IMAGE_SHAPE = (IMG_SIZE,IMG_SIZE,3)
 
-def get_labels():
-    urllib.request.urlretrieve("https://storage.googleapis.com/download.tensorflow.org/data/ImageNetLabels.txt", "labels.txt")
-
 def get_model():
     classifier = tf.keras.applications.MobileNetV2(input_shape=IMAGE_SHAPE,
                                                include_top=True,
@@ -21,4 +18,4 @@ def get_model():
 if __name__ == "__main__":
     # execute only if run as a script
     get_model()
-    get_labels()
+

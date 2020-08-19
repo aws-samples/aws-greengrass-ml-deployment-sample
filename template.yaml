@@ -9,13 +9,17 @@ Globals:
     Timeout: 10
 
 Parameters:
-  GreengrassFunctionAlias:
-    Description: Enter the function alias of the greengrass function
+  MLResourceLocation:
+    Description: The S3 url for the machine learning resource to be attached
     Type: String
   CoreName:
     Description: Green Core name to be created. A "Thing" with be created with _Core appended to the name
     Type: String
-    Default: gg_cfn
+    Default: gg_ml_sample
+  GreengrassFunctionAlias:
+    Description: Enter the function alias of the greengrass function
+    Type: String
+    Default: prod
   SecurityAccessCIDR:
     Description: CIDR block to limit inbound access for only SSH
     Type: String
@@ -23,25 +27,23 @@ Parameters:
   myKeyPair:
     Description: Amazon EC2 Key Pair for accessing Greengrass Core instance
     Type: "AWS::EC2::KeyPair::KeyName"
-
-
+  
 Mappings:
   # If Greengrass becomes available in other regions, add the x86 AMI Id for the
-  # image description:  "Ubuntu Server 16.04 LTS (HVM), SSD Volume Type"
+  # image description:  "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20200611"
   RegionMap: 
     us-east-1: 
-      "HVM": "ami-0565af6e282977273"
+      "HVM": "ami-0ac80df6eff0e70b5"
     us-west-2: 
-      "HVM": "ami-08692d171e3cf02d6"
-    # ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20200611
+      "HVM": "ami-053bc2e89490c5ab7"
     eu-west-1: 
       "HVM": "ami-089cc16f7f08c4457"
     eu-central-1: 
-      "HVM": "ami-05af84768964d3dc0"
+      "HVM": "ami-0d359437d1756caa8"
     ap-northeast-1: 
-      "HVM": "ami-06c43a7df16e8213c"
+      "HVM": "ami-0cfa3caed4b487e77"
     ap-southeast-2: 
-      "HVM": "ami-0789a5fb42dcccc10"
+      "HVM": "ami-0bc49f9283d686bab"
 
 Resources:
   #############################################################################
@@ -100,7 +102,6 @@ Resources:
   ImageClassifierFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      #FunctionName: ImageClassifier
       AutoPublishAlias: !Ref GreengrassFunctionAlias
       CodeUri: lambda/image_classifier/
       Handler: app.lambda_handler
@@ -121,13 +122,16 @@ Resources:
             FunctionArn: !Ref ImageClassifierFunction.Version
             FunctionConfiguration:
               Pinned: 'true'
-              Executable: index.py
+              Executable: app.py
               MemorySize: '65536'
               Timeout: '300'
-              EncodingType: binary
               Environment:
                 Variables:
                   CORE_NAME: !Ref CoreName
+                  PYTHONPATH: '/models/image_classifier/dependencies'
+                ResourceAccessPolicies:
+                  - ResourceId: image_classifier
+                    Permission: ro
                 AccessSysfs: 'false'
                 Execution:
                   IsolationMode: GreengrassContainer
@@ -155,13 +159,6 @@ Resources:
                         - - !Ref CoreName
                           - "out"
             Target: 'cloud'
-          - Id: Subscription3
-            Source: !Ref ImageClassifierFunction.Version
-            Subject: !Join
-                        - "/"
-                        - - !Ref CoreName
-                          - "telem"
-            Target: 'cloud'
   GreengrassResourceDefinition:
     Type: 'AWS::Greengrass::ResourceDefinition'
     Properties:
@@ -171,12 +168,12 @@ Resources:
     Properties:
       ResourceDefinitionId: !Ref GreengrassResourceDefinition
       Resources:
-        - Id: ResourceId1
+        - Id: image_classifier
           Name: S3MachineLearningModelResourceData
           ResourceDataContainer:
             S3MachineLearningModelResourceData:
-              S3Uri: 'https://greengrass-deployment-828266890613.s3-eu-west-1.amazonaws.com/models/20200716-083759/model.tar.gz'
-              DestinationPath: /mlModels/imageclassifier
+              S3Uri: !Ref MLResourceLocation
+              DestinationPath: /models/image_classifier
   
 
   #############################################################################
