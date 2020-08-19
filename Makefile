@@ -1,6 +1,7 @@
 GG_GROUP_NAME="gg_ml_sample"
 
 deploy:
+	scripts/reset_deployment.sh
 	sam build && sam deploy
 	scripts/deploy_gg.sh ${GG_GROUP_NAME}
 
