@@ -1,17 +1,29 @@
-import json
-import logging
-import urllib.request
-import greengrasssdk
-import numpy as np
-import tflite_runtime.interpreter as tflite
-import PIL.Image as Image
 
+import sys
+import os
+
+resourcePath = os.getenv("AWS_GG_RESOURCE_PREFIX")
+python_pkg_path = os.path.join(
+    resourcePath, "models/image_classifier/dependencies")
+sys.path.append(python_pkg_path)
+
+print(f'Path to ML resource: {resourcePath}')
+print(f'Path to ML resource  dependencies {python_pkg_path}')
+
+import PIL.Image as Image
+import tflite_runtime.interpreter as tflite
+import numpy as np
+import greengrasssdk
+import urllib.request
+import logging
+import json
 
 logger = logging.getLogger()
 iot_client = greengrasssdk.client('iot-data')
 
+
 # where to find the machine learning resource
-MODEL_DIR = "/models/image_classifier/"
+MODEL_DIR = os.path.join(resourcePath, "models/image_classifier/")
 # Which topic to use for output
 DEFAULT_TOPIC_RESPONSE = 'gg_ml_sample/out'
 # the parameter required in the input
@@ -31,7 +43,7 @@ with open(MODEL_DIR + 'ImageNetLabels.txt', 'r') as file:
 labels = labels_txt.split("\n")
 labels = labels[1:]
 
-print("Image classifier initialized")
+logger.info("Image classifier initialized")
 
 
 def classify_image(img_path):

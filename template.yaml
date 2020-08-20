@@ -102,19 +102,19 @@ Resources:
                                 - - "cert"
                                   - !GetAtt IoTThing.certificateId
           SyncShadow: "false"
-  ImageClassifierFunctionTFLite:
+  ImageClassifierFunctionNoContainer:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       AutoPublishAlias: !Ref GreengrassFunctionAlias
-      CodeUri: lambda/image_classifier/
+      CodeUri: lambda/image_classifier_no_container/
       Handler: app.lambda_handler
       Runtime: python3.7
   
-  ImageClassifierFunctionTFFull:
+  ImageClassifierFunctionContainer:
     Type: AWS::Serverless::Function 
     Properties:
       AutoPublishAlias: !Ref GreengrassFunctionAlias
-      CodeUri: lambda/image_classifier_full/
+      CodeUri: lambda/image_classifier_container/
       Handler: app.lambda_handler
       Runtime: python3.7
 
@@ -129,28 +129,24 @@ Resources:
           Execution:
             IsolationMode: GreengrassContainer
         Functions:
-          - Id: !Join ["_", [!Ref CoreName, "classifier_tf_lite"] ]
-            FunctionArn: !Ref ImageClassifierFunctionTFLite.Version
+          - Id: !Join ["_", [!Ref CoreName, "classifier_tf_no_container"] ]
+            FunctionArn: !Ref ImageClassifierFunctionNoContainer.Version
             FunctionConfiguration:
               Pinned: 'true'
               Executable: app.py
-              MemorySize: '65536'
               Timeout: '300'
               Environment:
                 Variables:
                   CORE_NAME: !Ref CoreName
-                  PYTHONPATH: '/models/image_classifier/dependencies'
                 ResourceAccessPolicies:
                   - ResourceId: image_classifier_tf_lite_package
-                    Permission: ro
-                AccessSysfs: 'false'
                 Execution:
-                  IsolationMode: GreengrassContainer
+                  IsolationMode: NoContainer
                   RunAs:
-                    Uid: '1'
-                    Gid: '10'
-          - Id: !Join ["_", [!Ref CoreName, "classifier_tf_full"] ]
-            FunctionArn: !Ref ImageClassifierFunctionTFFull.Version
+                    Uid: '111'
+                    Gid: '999'
+          - Id: !Join ["_", [!Ref CoreName, "classifier_tf_container"] ]
+            FunctionArn: !Ref ImageClassifierFunctionContainer.Version
             FunctionConfiguration:
               Pinned: 'true'
               Executable: app.py
@@ -182,9 +178,9 @@ Resources:
                         - "/"
                         - - !Ref CoreName
                           - "in"
-            Target: !Ref ImageClassifierFunctionTFLite.Version
+            Target: !Ref ImageClassifierFunctionNoContainer.Version
           - Id: Subscription2
-            Source: !Ref ImageClassifierFunctionTFLite.Version
+            Source: !Ref ImageClassifierFunctionNoContainer.Version
             Subject: !Join
                         - "/"
                         - - !Ref CoreName
@@ -196,9 +192,9 @@ Resources:
                         - "/"
                         - - !Ref CoreName
                           - "in"
-            Target: !Ref ImageClassifierFunctionTFFull.Version
+            Target: !Ref ImageClassifierFunctionContainer.Version
           - Id: Subscription4
-            Source: !Ref ImageClassifierFunctionTFFull.Version
+            Source: !Ref ImageClassifierFunctionContainer.Version
             Subject: !Join
                         - "/"
                         - - !Ref CoreName
@@ -219,6 +215,10 @@ Resources:
             S3MachineLearningModelResourceData:
               S3Uri: !Ref MLResourceLocationTFLite
               DestinationPath: /models/image_classifier
+              OwnerSetting:  
+                GroupOwner: 999
+                GroupPermission: ro
+                
         - Id: image_classifier_tf_full_package
           Name: S3MachineLearningModelResourceDataTFFull
           ResourceDataContainer:
