@@ -45,18 +45,13 @@ Resources:
               - s3:*
             Resource:
               - "*"
-  CodeBuildProject:
+  CodeBuildProjectTFLite:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: PackageModel
+      Name: PackageModelTFLite
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Artifacts:
-          ArtifactIdentifier: String
-          Location: !Ref DeploymentArtifactBucket
-          Name: model-package.zip
-          Packaging: ZIP
-          Path: model-packages
-          Type: S3
+        Type: NO_ARTIFACTS
       Environment:
         Type: linuxContainer
         # ComputeType options: BUILD_GENERAL1_SMALL, BUILD_GENERAL1_MEDIUM, BUILD_GENERAL1_LARGE
@@ -68,5 +63,23 @@ Resources:
             Value: !Ref DeploymentArtifactBucket
       Source:
         Type: S3
-        Location: !Sub '${BucketName}/codebuild/'
+        Location: !Sub '${BucketName}/codebuild/tf_lite/'
+      TimeoutInMinutes: 10
+  CodeBuildProjectTFFull:
+    Type: AWS::CodeBuild::Project
+    Properties:
+      Name: PackageModelTFFull
+      ServiceRole: !GetAtt CodeBuildServiceRole.Arn
+      Artifacts:
+        Type: NO_ARTIFACTS
+      Environment:
+        Type: linuxContainer
+        ComputeType: BUILD_GENERAL1_SMALL
+        Image: aws/codebuild/standard:4.0
+        EnvironmentVariables:
+          - Name: BUILD_ARTIFACT_BUCKET
+            Value: !Ref DeploymentArtifactBucket
+      Source:
+        Type: S3
+        Location: !Sub '${BucketName}/codebuild/tf_full/'
       TimeoutInMinutes: 10

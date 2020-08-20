@@ -13,8 +13,11 @@ uploadScript:
 
 runBuild:
 	echo "Running Build to create model"
-	aws codebuild start-build --project-name PackageModel --query "build.id" --output=text
-	aws logs tail /aws/codebuild/PackageModel --follow --since 20s 
+	aws codebuild start-build --project-name PackageModelTFFull --query "build.id" --output=text
+	aws codebuild start-build --project-name PackageModelTFLite --query "build.id" --output=text
+
+logs:
+	aws logs tail /aws/codebuild --follow --since 20s 
 
 destroy:
 	aws cloudformation delete-stack --stack-name build-model

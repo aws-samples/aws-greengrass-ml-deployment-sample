@@ -9,7 +9,10 @@ Globals:
     Timeout: 10
 
 Parameters:
-  MLResourceLocation:
+  MLResourceLocationTFLite:
+    Description: The S3 url for the machine learning resource to be attached
+    Type: String
+  MLResourceLocationTFFull:
     Description: The S3 url for the machine learning resource to be attached
     Type: String
   CoreName:
@@ -99,11 +102,19 @@ Resources:
                                 - - "cert"
                                   - !GetAtt IoTThing.certificateId
           SyncShadow: "false"
-  ImageClassifierFunction:
+  ImageClassifierFunctionTFLite:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       AutoPublishAlias: !Ref GreengrassFunctionAlias
       CodeUri: lambda/image_classifier/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+  
+  ImageClassifierFunctionTFFull:
+    Type: AWS::Serverless::Function 
+    Properties:
+      AutoPublishAlias: !Ref GreengrassFunctionAlias
+      CodeUri: lambda/image_classifier_full/
       Handler: app.lambda_handler
       Runtime: python3.7
 
@@ -118,8 +129,8 @@ Resources:
           Execution:
             IsolationMode: GreengrassContainer
         Functions:
-          - Id: !Join ["_", [!Ref CoreName, "sample"] ]
-            FunctionArn: !Ref ImageClassifierFunction.Version
+          - Id: !Join ["_", [!Ref CoreName, "classifier_tf_lite"] ]
+            FunctionArn: !Ref ImageClassifierFunctionTFLite.Version
             FunctionConfiguration:
               Pinned: 'true'
               Executable: app.py
@@ -130,7 +141,27 @@ Resources:
                   CORE_NAME: !Ref CoreName
                   PYTHONPATH: '/models/image_classifier/dependencies'
                 ResourceAccessPolicies:
-                  - ResourceId: image_classifier
+                  - ResourceId: image_classifier_tf_lite_package
+                    Permission: ro
+                AccessSysfs: 'false'
+                Execution:
+                  IsolationMode: GreengrassContainer
+                  RunAs:
+                    Uid: '1'
+                    Gid: '10'
+          - Id: !Join ["_", [!Ref CoreName, "classifier_tf_full"] ]
+            FunctionArn: !Ref ImageClassifierFunctionTFFull.Version
+            FunctionConfiguration:
+              Pinned: 'true'
+              Executable: app.py
+              MemorySize: '1000000'
+              Timeout: '300'
+              Environment:
+                Variables:
+                  CORE_NAME: !Ref CoreName
+                  PYTHONPATH: '/models/image_classifier/dependencies'
+                ResourceAccessPolicies:
+                  - ResourceId: image_classifier_tf_full_package
                     Permission: ro
                 AccessSysfs: 'false'
                 Execution:
@@ -151,9 +182,23 @@ Resources:
                         - "/"
                         - - !Ref CoreName
                           - "in"
-            Target: !Ref ImageClassifierFunction.Version
+            Target: !Ref ImageClassifierFunctionTFLite.Version
           - Id: Subscription2
-            Source: !Ref ImageClassifierFunction.Version
+            Source: !Ref ImageClassifierFunctionTFLite.Version
+            Subject: !Join
+                        - "/"
+                        - - !Ref CoreName
+                          - "out"
+            Target: 'cloud'
+          - Id: Subscription3
+            Source: 'cloud'
+            Subject: !Join
+                        - "/"
+                        - - !Ref CoreName
+                          - "in"
+            Target: !Ref ImageClassifierFunctionTFFull.Version
+          - Id: Subscription4
+            Source: !Ref ImageClassifierFunctionTFFull.Version
             Subject: !Join
                         - "/"
                         - - !Ref CoreName
@@ -168,11 +213,17 @@ Resources:
     Properties:
       ResourceDefinitionId: !Ref GreengrassResourceDefinition
       Resources:
-        - Id: image_classifier
-          Name: S3MachineLearningModelResourceData
+        - Id: image_classifier_tf_lite_package
+          Name: S3MachineLearningModelResourceDataTFLite
           ResourceDataContainer:
             S3MachineLearningModelResourceData:
-              S3Uri: !Ref MLResourceLocation
+              S3Uri: !Ref MLResourceLocationTFLite
+              DestinationPath: /models/image_classifier
+        - Id: image_classifier_tf_full_package
+          Name: S3MachineLearningModelResourceDataTFFull
+          ResourceDataContainer:
+            S3MachineLearningModelResourceData:
+              S3Uri: !Ref MLResourceLocationTFFull
               DestinationPath: /models/image_classifier
   
 
@@ -256,7 +307,7 @@ Resources:
           export DEBIAN_FRONTEND=noninteractive
           apt update -y
           apt upgrade -y
-          apt install python-minimal python-pip -y
+          apt install python-minimal python-pip python3-distutils -y
           pip install greengrasssdk
           adduser --system ggc_user
           groupadd --system ggc_group
@@ -448,7 +499,5 @@ Outputs:
   EC2IPAddress:
     Description: "EC2 Instance Public IP Address"
     Value: !GetAtt GreengrassInstance.PublicIp
-  ImageClassifierFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt ImageClassifierFunction.Arn
+
 
