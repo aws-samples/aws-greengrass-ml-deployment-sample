@@ -5,7 +5,7 @@ MY_KEY_PAIR=iot-ml-sample
 
 deploy:
 	scripts/reset_deployment.sh
-	sam build && sam deploy --parameter-overrides "MLResourceLocationTFLite=${MODEL_PACKAGE} MLResourceLocationTFFull=${MODEL_PACKAGE_TF_FULL} myKeyPair=${MY_KEY_PAIR}"
+	sam build --use-container && sam deploy --parameter-overrides "MLResourceLocationTFLite=${MODEL_PACKAGE} MLResourceLocationTFFull=${MODEL_PACKAGE_TF_FULL} myKeyPair=${MY_KEY_PAIR}"
 	scripts/create_deployment.sh ${GG_GROUP_NAME}
 
 destroy:
