@@ -1,8 +1,8 @@
-# Maintaining ML models deployed on AWS Greengrass 
+# Deployment options for machine learning inference on AWS Greengrass 
 
 ## What is this?
 
-This repository provides an overview of deployment options for machine learning models on AWS Greengrass and sample code how to deploy and maintain a custom model trained with Tensorflow!
+This repository provides an overview of deployment options for machine learning inference on AWS Greengrass including sample code how to deploy and maintain a custom model for inference trained with Tensorflow!
 The sample uses a machine learning resource in AWS IoT Greengrass to deploy required machine learning libraries like Tensorflow for inference on the Greengrass device!
 
 ## Who is this for?
