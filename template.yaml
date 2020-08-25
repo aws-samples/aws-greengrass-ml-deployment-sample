@@ -15,6 +15,9 @@ Parameters:
   MLResourceLocationTFFull:
     Description: The S3 url for the machine learning resource to be attached
     Type: String
+  MLResourceLocationNeo:
+    Description: The S3 url for the machine learning resource to be attached
+    Type: String    
   CoreName:
     Description: Green Core name to be created. A "Thing" with be created with _Core appended to the name
     Type: String
@@ -118,6 +121,14 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python3.7
 
+  ImageClassifierFunctionNeo:
+    Type: AWS::Serverless::Function 
+    Properties:
+      AutoPublishAlias: !Ref GreengrassFunctionAlias
+      CodeUri: lambda/image_classifier_neo/
+      Handler: app.lambda_handler
+      Runtime: python3.7
+
   FunctionDefinition:
     # Example of using "InitialVersion" to not have to reference a separate
     # "Version" resource
@@ -165,6 +176,25 @@ Resources:
                   RunAs:
                     Uid: '1'
                     Gid: '10'
+          - Id: !Join ["_", [!Ref CoreName, "classifier_neo"] ]
+            FunctionArn: !Ref ImageClassifierFunctionNeo.Version
+            FunctionConfiguration:
+              Pinned: 'true'
+              Executable: app.py
+              MemorySize: '1000000'
+              Timeout: '300'
+              Environment:
+                Variables:
+                  CORE_NAME: !Ref CoreName
+                ResourceAccessPolicies:
+                  - ResourceId: image_classifier_neo
+                    Permission: ro
+                AccessSysfs: 'false'
+                Execution:
+                  IsolationMode: GreengrassContainer
+                  RunAs:
+                    Uid: '1'
+                    Gid: '10'
   SubscriptionDefinition:
     Type: 'AWS::Greengrass::SubscriptionDefinition'
     Properties:
@@ -200,6 +230,20 @@ Resources:
                         - - !Ref CoreName
                           - "out"
             Target: 'cloud'
+          - Id: Subscription5
+            Source: 'cloud'
+            Subject: !Join
+                        - "/"
+                        - - !Ref CoreName
+                          - "in"
+            Target: !Ref ImageClassifierFunctionNeo.Version
+          - Id: Subscription6
+            Source: !Ref ImageClassifierFunctionNeo.Version
+            Subject: !Join
+                        - "/"
+                        - - !Ref CoreName
+                          - "out"
+            Target: 'cloud'
   GreengrassResourceDefinition:
     Type: 'AWS::Greengrass::ResourceDefinition'
     Properties:
@@ -224,6 +268,12 @@ Resources:
           ResourceDataContainer:
             S3MachineLearningModelResourceData:
               S3Uri: !Ref MLResourceLocationTFFull
+              DestinationPath: /models/image_classifier
+        - Id: image_classifier_neo
+          Name: S3MachineLearningModelNeo
+          ResourceDataContainer:
+            S3MachineLearningModelResourceData:
+              S3Uri: !Ref MLResourceLocationNeo
               DestinationPath: /models/image_classifier
   
 

@@ -1,4 +1,3 @@
-
 import sys
 import os
 
@@ -91,6 +90,7 @@ def lambda_handler(event, context):
     payload = json.dumps(
         {
             "image": event["image"],
+            "function" : os.getenv('MY_FUNCTION_ARN'),
             "result": result
         }
     )

@@ -1,11 +1,12 @@
-import os
 import json
 import logging
+import os
 import urllib.request
 import greengrasssdk
 import numpy as np
-import tensorflow as tf
 import PIL.Image as Image
+from dlr import DLRModel
+
 
 
 logger = logging.getLogger()
@@ -20,18 +21,13 @@ IMAGE_PARAM = "image"
 # the DEFAULT image size for the model
 IMG_SIZE = 224
 
+model = DLRModel(MODEL_DIR, 'cpu')
+logger.info("Initialized")
 
-# load model
-classifier = tf.keras.models.load_model(MODEL_DIR +'saved_model')
-
-# load labels and remove background class which is not used by this model
-with open(MODEL_DIR + 'ImageNetLabels.txt', 'r') as file:
+with open('ImageNetLabels.txt', 'r') as file:
     labels_txt = file.read()
 labels = labels_txt.split("\n")
 labels = labels[1:]
-
-print("Image classifier initialized")
-
 
 def classify_image(img_path):
     """
@@ -39,13 +35,11 @@ def classify_image(img_path):
     """
     image = Image.open(img_path).resize((IMG_SIZE, IMG_SIZE))
     image = np.array(image)/255.0
+    image = np.moveaxis(image, 2, 0)
     image = image[np.newaxis, ...]
-    output_data = classifier.predict(image)
-    logger.debug("Output data shape: %s", output_data[0].shape)
-    logger.debug("Output data: %s", output_data[0])
+    output_data = model.run(image)
     predicted_class = np.argmax(output_data[0], axis=-1)
-    logger.debug("Predicted class: %s", predicted_class)
-    return labels[predicted_class]
+    return labels[predicted_class[0]]
 
 
 def lambda_handler(event, context):
