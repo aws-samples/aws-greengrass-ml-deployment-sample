@@ -9,17 +9,18 @@ sys.path.append(python_pkg_path)
 print(f'Path to ML resource: {resourcePath}')
 print(f'Path to ML resource  dependencies {python_pkg_path}')
 
-import PIL.Image as Image
-import tflite_runtime.interpreter as tflite
-import numpy as np
-import greengrasssdk
-import urllib.request
-import logging
+import os
 import json
+import logging
+import urllib.request
+import greengrasssdk
+import numpy as np
+import tensorflow as tf
+import PIL.Image as Image
+
 
 logger = logging.getLogger()
 iot_client = greengrasssdk.client('iot-data')
-
 
 # where to find the machine learning resource
 MODEL_DIR = os.path.join(resourcePath, "models/image_classifier/")
@@ -32,9 +33,7 @@ IMG_SIZE = 224
 
 
 # load model
-interpreter = tflite.Interpreter(
-    model_path=MODEL_DIR + "model.tflite")
-interpreter.allocate_tensors()
+classifier = tf.keras.models.load_model(MODEL_DIR +'saved_model')
 
 # load labels and remove background class which is not used by this model
 with open(MODEL_DIR + 'ImageNetLabels.txt', 'r') as file:
@@ -42,7 +41,7 @@ with open(MODEL_DIR + 'ImageNetLabels.txt', 'r') as file:
 labels = labels_txt.split("\n")
 labels = labels[1:]
 
-logger.info("Image classifier initialized")
+print("Image classifier initialized")
 
 
 def classify_image(img_path):
@@ -52,17 +51,9 @@ def classify_image(img_path):
     image = Image.open(img_path).resize((IMG_SIZE, IMG_SIZE))
     image = np.array(image)/255.0
     image = image[np.newaxis, ...]
-
-    # Get input and output tensors.
-    input_details = interpreter.get_input_details()
-    output_details = interpreter.get_output_details()
-
-    # Test the model on random input data.
-    #input_shape = input_details[0]['shape']
-    interpreter.set_tensor(input_details[0]['index'], image.astype('float32'))
-    interpreter.invoke()
-
-    output_data = interpreter.get_tensor(output_details[0]['index'])
+    output_data = classifier.predict(image)
+    logger.debug("Output data shape: %s", output_data[0].shape)
+    logger.debug("Output data: %s", output_data[0])
     predicted_class = np.argmax(output_data[0], axis=-1)
     logger.debug("Predicted class: %s", predicted_class)
     return labels[predicted_class]
@@ -98,3 +89,4 @@ def lambda_handler(event, context):
         'Publishing to %s , \n payload: %s', DEFAULT_TOPIC_RESPONSE, payload)
     iot_client.publish(topic=DEFAULT_TOPIC_RESPONSE, payload=payload)
     return
+

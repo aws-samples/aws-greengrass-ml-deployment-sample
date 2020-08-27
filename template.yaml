@@ -9,9 +9,6 @@ Globals:
     Timeout: 10
 
 Parameters:
-  MLResourceLocationTFLite:
-    Description: The S3 url for the machine learning resource to be attached
-    Type: String
   MLResourceLocationTFFull:
     Description: The S3 url for the machine learning resource to be attached
     Type: String
@@ -150,7 +147,7 @@ Resources:
                 Variables:
                   CORE_NAME: !Ref CoreName
                 ResourceAccessPolicies:
-                  - ResourceId: image_classifier_tf_lite_package
+                  - ResourceId: image_classifier_tf_full_package
                 Execution:
                   IsolationMode: NoContainer
                   RunAs:
@@ -253,24 +250,17 @@ Resources:
     Properties:
       ResourceDefinitionId: !Ref GreengrassResourceDefinition
       Resources:
-        - Id: image_classifier_tf_lite_package
-          Name: S3MachineLearningModelResourceDataTFLite
-          ResourceDataContainer:
-            S3MachineLearningModelResourceData:
-              S3Uri: !Ref MLResourceLocationTFLite
-              DestinationPath: /models/image_classifier
-              OwnerSetting:  
-                GroupOwner: 999
-                GroupPermission: ro
-                
         - Id: image_classifier_tf_full_package
-          Name: S3MachineLearningModelResourceDataTFFull
+          Name: S3MLResourceDataTFFullNoContainer
           ResourceDataContainer:
             S3MachineLearningModelResourceData:
               S3Uri: !Ref MLResourceLocationTFFull
               DestinationPath: /models/image_classifier
+              OwnerSetting:  
+                GroupOwner: 999
+                GroupPermission: ro
         - Id: image_classifier_neo
-          Name: S3MachineLearningModelNeo
+          Name: S3MLNeo
           ResourceDataContainer:
             S3MachineLearningModelResourceData:
               S3Uri: !Ref MLResourceLocationNeo
@@ -342,7 +332,7 @@ Resources:
     DependsOn: GreengrassGroup
     Properties:
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", HVM]
-      InstanceType: t3.micro
+      InstanceType: t3.small
       KeyName: !Ref myKeyPair
       SecurityGroupIds: !Split [",", !GetAtt InstanceSecurityGroup.GroupId]
       Tags:
@@ -439,7 +429,7 @@ Resources:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       Description: Create thing, certificate, and policy, return cert and private key
-      CodeUri: lambda/gg_create_thing/
+      CodeUri: lambda/cfn-util/gg_create_thing/
       Handler: index.handler
       Runtime: python3.7
       Role: !GetAtt LambdaExecutionRole.Arn
@@ -458,7 +448,7 @@ Resources:
   GroupDeploymentResetFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: lambda/gg_deployment_reset
+      CodeUri: lambda/cfn-util/gg_deployment_reset
       Handler: index.handler
       Runtime: python3.7
       Role: !GetAtt LambdaExecutionRole.Arn

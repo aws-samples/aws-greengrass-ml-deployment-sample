@@ -1,0 +1,21 @@
+  
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.7
+    commands:
+      - pip install tensorflow==2.2.0 sagemaker boto3
+  build:
+    commands:
+      - python save_model.py
+      - tar -zcvf model.tar.gz model.h5
+      - aws s3 cp model.tar.gz s3://${BUILD_ARTIFACT_BUCKET}/models/mobilenet-keras/model.tar.gz
+      - echo "Uploaded final package to s3://${BUILD_ARTIFACT_BUCKET}/models/mobilenet-keras/model.tar.gz"
+      - python compile_model.py
+    artifacts:
+      files:
+        - '**/*'
+      base-directory: 'model_package'
+      

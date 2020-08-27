@@ -9,7 +9,7 @@ Parameters:
 Resources:
   DeploymentArtifactBucket:
     Type: AWS::S3::Bucket
-    DeletionPolicy: Delete
+    DeletionPolicy: Retain
     Properties:
       AccessControl: Private
       BucketName: !Ref BucketName
@@ -25,6 +25,51 @@ Resources:
             Principal:
               Service:
                 - codebuild.amazonaws.com
+  NeoCompilationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: NeoCompilationRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service:
+                - sagemaker.amazonaws.com
+                
+  NeoCompilationPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: NeoCompilation
+      Roles:
+        - !Ref NeoCompilationRole
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: "arn:aws:logs:*:*:*"
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - sagemaker:*
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - iam:*
+            Resource:
+              - "*"
+
   CodeBuildServicePolicy:
     Type: AWS::IAM::Policy
     Properties:
@@ -45,13 +90,29 @@ Resources:
               - s3:*
             Resource:
               - "*"
-  CodeBuildProjectTFLite:
+          - Effect: Allow
+            Action:
+              - sagemaker:*
+            Resource:
+              - "*"
+          - Effect: Allow
+            Action:
+              - iam:*
+            Resource:
+              - "*"
+
+              
+
+  CodeBuildProjectNeo:
     Type: AWS::CodeBuild::Project
     Properties:
-      Name: PackageModelTFLite
+      Name: PackageModelNeo
       ServiceRole: !GetAtt CodeBuildServiceRole.Arn
       Artifacts:
         Type: NO_ARTIFACTS
+      LogsConfig : 
+        CloudWatchLogs:
+          Status: ENABLED
       Environment:
         Type: linuxContainer
         # ComputeType options: BUILD_GENERAL1_SMALL, BUILD_GENERAL1_MEDIUM, BUILD_GENERAL1_LARGE
@@ -63,7 +124,7 @@ Resources:
             Value: !Ref DeploymentArtifactBucket
       Source:
         Type: S3
-        Location: !Sub '${BucketName}/codebuild/tf_lite/'
+        Location: !Sub '${BucketName}/codebuild/sagemaker-neo/'
       TimeoutInMinutes: 10
   CodeBuildProjectTFFull:
     Type: AWS::CodeBuild::Project
