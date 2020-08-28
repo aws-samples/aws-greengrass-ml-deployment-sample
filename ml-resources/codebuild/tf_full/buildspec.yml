@@ -16,8 +16,8 @@ phases:
       - mv saved_model ImageNetLabels.txt dependencies model_package
       - tar -zcvf model-package.tar.gz -C model_package .
       - timestampStr=$(date +%y-%m-%d-%H-%M-%S)
-      - aws s3 cp model-package.tar.gz s3://${BUILD_ARTIFACT_BUCKET}/models/image-net-tf-full-${timestampStr}/model-package.tar.gz
-      - echo "Uploaded final package to s3://${BUILD_ARTIFACT_BUCKET}/models/image-net-tf-full-${timestampStr}/model-package.tar.gz"
+      - aws s3 cp model-package.tar.gz s3://${BUILD_ARTIFACT_BUCKET}/models/mobilenet-keras-with-libs/model-package.tar.gz
+      - echo "Uploaded final package to s3://${BUILD_ARTIFACT_BUCKET}/models/mobilenet-keras-with-libs/model-package.tar.gz"
     artifacts:
       files:
         - '**/*'

@@ -3,8 +3,6 @@ version = 0.1
 [default.deploy]
 [default.deploy.parameters]
 stack_name = "gg-ml-sample"
-s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-fuoldo4pl09c"
 s3_prefix = "gg-ml-sample"
-region = "eu-west-1"
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "GreengrassFunctionAlias=\"prod\" myKeyPair=\"iot-ml-sample\" CoreName=\"gg_ml_sample\" SecurityAccessCIDR=\"0.0.0.0/0\""
+
