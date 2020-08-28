@@ -10,8 +10,6 @@ MODEL_PACKAGE_NEO="s3://${BUCKET}/models/mobilenet-neo/model-ml_c5.tar.gz"
 
 build:
 	sam build --use-container
-	cp .aws-sam/build/ImageClassifierFunctionNeo/dlr-1.1.data/data/dlr/libdlr.so .aws-sam/build/ImageClassifierFunctionNeo/dlr/
-
 
 deploy: build
 	scripts/reset_deployment.sh
