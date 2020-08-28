@@ -1,10 +1,11 @@
-# Deployment and maintanance of ML libraries on an AWS IoT Greengrass device
+# Deployment options for machine learning inference on AWS Greengrass
 
-This sample provides an overview of options and reusable components for deployment&maintanance of ML models on an AWS IoT Greengrass device.
+## What is this?
 
-The code examples assumes usage of a Python as a programming language for performing inference.
+This repository provides an overview of deployment options for machine learning inference on AWS Greengrass including sample code how to deploy and maintain a custom model for inference trained with Tensorflow!
+The sample uses a machine learning resource in AWS IoT Greengrass to deploy required machine learning libraries like Tensorflow for inference on the Greengrass device!
 
-## Introduction
+## Who is this for?
 
 With AWS IoT Greengrass, you can [perform machine learning (ML) inference at the edge](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) on locally generated data using cloud-trained models. You benefit from the low latency and cost savings of running local inference, yet still take advantage of cloud computing power for training models and complex processing.
 
@@ -80,158 +81,99 @@ The content of "mllibraries.zip" file will be transferred from an Amazon S3 buck
 
 Python interpreter uses environment variable PYTHONPATH to look for available libraries. If you configure PYTHONPATH in GG Group Lambda config, it‘s prepended to an actual PYTHONPATH, e.g. if PYTHONPATH=„/mllibs“ in GG group Lambda settings the PYTHONPATH is „/mllibs:/lamba“ during Lambda execution
 
-#### Limitations
+- a maintainable way to deploy your own custom machine learning model for inference on AWS Greengrass
+- an example on how to deploy and maintain a Tensorflow model for inference on AWS Greengrass
+- an example for a fully automated deployment of AWS Greengrass using AWS CloudFormation and [AWS SAM](https://github.com/awslabs/serverless-application-model)
 
-- Works only for contanerized AWS Lambda functions
+## Getting started
 
-### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+TODO: Fill in sample execution instructions
 
-### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+## Introduction to ML inference options on AWS Greengrass
 
-### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+With AWS IoT Greengrass, you can [perform machine learning (ML) inference at the edge](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) on locally generated data using cloud-trained models. You benefit from the low latency and cost savings of running local inference, yet still take advantage of cloud computing power for training models and complex processing.
 
-### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+In order to perform ML inference at the edge with [AWS IoT Greengrass](https://aws.amazon.com/greengrass/) you need 3 components deployed on the device:
 
-### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+- the trained machine learning model
+- the inference code
+- Machine learning libraries required for inference, like Tensorflow, Pytorch or the [Amazon SageMaker Neo deep learning runtime](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html#dlc-optimize-info)
 
-### END OF CONTENT! END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!END OF CONTENT!
+Each of these components has different requirements in terms of storage and update frequency:
 
-### 2. Install ML libs on OS level in „/abc/libs“, create an volume ressource in GG Group pointing to „/abc/libs“
+| Part               | Typical size      | Update demand frequency                   |
+| ------------------ | ----------------- | ----------------------------------------- |
+| 1. ML model        | few MB up to a GB | medium to high (depending on model decay) |
+| 2. Inference logic | usually few KB    | medium                                    |
+| 3. ML Libraries    | up to several Gb  | low (new versions, security fixes)        |
 
-## Technical background
+Depending on size and and update frequency demand there are several option you can pick for deployment for each of these components.
 
-### PYTHONPATH environment variable on AWS IoT Greengrass Lambda
+### Deploying the trained machine learning model
 
-P
+The machine learning model can be included as part of the lambda function deployment package itself or deployed using a ["ML resources"](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) in AWS Greengrass.
 
-## Comparison
+Using ML resources is usually the preferred when:
 
-| Option      | Criteria 1 | Criteria 2 |
-| ----------- | ---------- | ---------- |
-| 1. Option 1 |            |            |
-| 2. Option 2 |            |            |
+- the model is to big to fit in the maximum deployment package size of a lambda function (50 MB zipped)
+- the model should be updated independent of the lambda function code
 
-## Other related services
+### Deploying the inference code
 
-## Conclusion and further reading
+The inference code itself is deployed as part of the lambda function. It uses a machine learning library to call the model for inference and returns the results as required within the business context. In a production setting the deployment of the lambda function should be automated ideally using infrastructure as code (IaC). A common tool particularly when automating the deployment of lambda functions is [AWS SAM](https://github.com/awslabs/serverless-application-model).
+AWS SAM makes it easy to organize all required resources in a single stack and has a lot of best-practices for deployment built-in.
 
-# greengrass-ml-sample-app
+### Deploying machine learning libraries
 
-This project contains source code and supporting files for a serverless application that you can deploy with the SAM CLI. It includes the following files and folders.
+In order to get predictions from a model within your inference code you require the necessary machine learning library. This is typically a machine learning library optimized for inference at the edge like the [Amazon SageMaker Neo deep learning runtime](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html#dlc-optimize-info) or [Tensorflow Lite](https://www.tensorflow.org/lite).
+These libraries are small in size and can be included as part of the lambda deployment package.
 
-- hello_world - Code for the application's Lambda function.
-- events - Invocation events that you can use to invoke the function.
-- tests - Unit tests for the application code.
-- template.yaml - A template that defines the application's AWS resources.
+However not all model architectures are supported by these edge optimized inference libraries. It is not uncommon to require a full distribution of [Tensorflow](https://www.tensorflow.org/), [Pytorch](https://pytorch.org/) or [MXNet](https://mxnet.apache.org/) to be deployed on the edge device. These libraries can be several hundred MB in size, which makes them impossible to be included in the AWS Lambda deployment package.
 
-The application uses several AWS resources, including Lambda functions and an API Gateway API. These resources are defined in the `template.yaml` file in this project. You can update the template to add AWS resources through the same deployment process that updates your application code.
+There are two ways to deal with these large libraries during deployment:
 
-If you prefer to use an integrated development environment (IDE) to build and test your application, you can use the AWS Toolkit.  
-The AWS Toolkit is an open source plug-in for popular IDEs that uses the SAM CLI to build and deploy serverless applications on AWS. The AWS Toolkit also adds a simplified step-through debugging experience for Lambda function code. See the following links to get started.
+- Deploy ML libraries on OS level on the Greengrass core
+- Deploy ML libraries using a [Greengrass ML resource](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html)
 
-- [PyCharm](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-- [IntelliJ](https://docs.aws.amazon.com/toolkit-for-jetbrains/latest/userguide/welcome.html)
-- [VS Code](https://docs.aws.amazon.com/toolkit-for-vscode/latest/userguide/welcome.html)
-- [Visual Studio](https://docs.aws.amazon.com/toolkit-for-visual-studio/latest/user-guide/welcome.html)
+#### Installing ML libraries on OS level
 
-## Deploy the sample application
-
-The Serverless Application Model Command Line Interface (SAM CLI) is an extension of the AWS CLI that adds functionality for building and testing Lambda applications. It uses Docker to run your functions in an Amazon Linux environment that matches Lambda. It can also emulate your application's build environment and API.
-
-To use the SAM CLI, you need the following tools.
-
-- SAM CLI - [Install the SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
-- [Python 3 installed](https://www.python.org/downloads/)
-- Docker - [Install Docker community edition](https://hub.docker.com/search/?type=edition&offering=community)
-
-To build and deploy your application for the first time, run the following in your shell:
+A typical way this is done is using the OS or language specific package manager, e.g. using the system python package manager:
 
 ```bash
-sam build --use-container
-sam deploy --guided
+pip install tensorflow
 ```
 
-The first command will build the source of your application. The second command will package and deploy your application to AWS, with a series of prompts:
+This comes with two big disadvantages:
 
-- **Stack Name**: The name of the stack to deploy to CloudFormation. This should be unique to your account and region, and a good starting point would be something matching your project name.
-- **AWS Region**: The AWS region you want to deploy your app to.
-- **Confirm changes before deploy**: If set to yes, any change sets will be shown to you before execution for manual review. If set to no, the AWS SAM CLI will automatically deploy application changes.
-- **Allow SAM CLI IAM role creation**: Many AWS SAM templates, including this example, create AWS IAM roles required for the AWS Lambda function(s) included to access AWS services. By default, these are scoped down to minimum required permissions. To deploy an AWS CloudFormation stack which creates or modified IAM roles, the `CAPABILITY_IAM` value for `capabilities` must be provided. If permission isn't provided through this prompt, to deploy this example you must explicitly pass `--capabilities CAPABILITY_IAM` to the `sam deploy` command.
-- **Save arguments to samconfig.toml**: If set to yes, your choices will be saved to a configuration file inside the project, so that in the future you can just re-run `sam deploy` without parameters to deploy changes to your application.
+- the deployment of the libraries is decoupled from the standard [Greengrass group deployment process](https://docs.aws.amazon.com/greengrass/latest/developerguide/deployments.html)
+- the deployment requires a separate custom agent on the device or remote OS access to perform the installation and required updates
 
-You can find your API Gateway Endpoint URL in the output values displayed after deployment.
+#### Installing ML libraries using Greegrass ML resources
 
-## Use the SAM CLI to build and test locally
+A better option is to bundle required libraries into ["ML resources"](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) during deployment and load the libraries dynamically
+on function startup. In Python this can be achieved in two ways:
 
-Build your application with the `sam build --use-container` command.
+- by setting the PYTHONPATH environment variable to the location of the ML resource (Containerized lambda functions only).
+- or by dynamically appending the location of the libraries to the Python system path (non-containerized lambda functions):
 
-```bash
-greengrass-ml-sample-app$ sam build --use-container
+```python
+import sys
+import os
+
+resourcePath = os.getenv("AWS_GG_RESOURCE_PREFIX")
+python_pkg_path = os.path.join(
+    resourcePath, "<path_to_dependencies>")
+sys.path.append(python_pkg_path)
 ```
 
-The SAM CLI installs dependencies defined in `hello_world/requirements.txt`, creates a deployment package, and saves it in the `.aws-sam/build` folder.
+This allows you to deploy machine earning libraries as part of the standard Greengrass deployment process and has no limitation on the maximum size of the libraries imposed by the deployment process.
 
-Test a single function by invoking it directly with a test event. An event is a JSON document that represents the input that the function receives from the event source. Test events are included in the `events` folder in this project.
+#### How it works in detail
 
-Run functions locally and invoke them with the `sam local invoke` command.
+The content of the file referenced in the ML resource containing the pre-built libraries will be transferred from an Amazon S3 bucket to your Greengrass devices and unpackaged in a local directory. As the AWS Lambda ML inference function starts, AWS IoT Greengrass core will mount the local directory with unpackaged contents of the file to a local directory in the Lambda container e.g. `/mllibs`.
 
-```bash
-greengrass-ml-sample-app$ sam local invoke HelloWorldFunction --event events/event.json
-```
+The Python interpreter then uses the environment variable PYTHONPATH to look for and load available libraries. If you configure PYTHONPATH in GG Group Lambda config, it‘s prepended to an actual PYTHONPATH, e.g. if PYTHONPATH=„/mllibs“ in GG group Lambda settings the PYTHONPATH is „/mllibs:/lamba“ during Lambda execution
 
-The SAM CLI can also emulate your application's API. Use the `sam local start-api` to run the API locally on port 3000.
+## Inspecting the Greengrass ML inference example
 
-```bash
-greengrass-ml-sample-app$ sam local start-api
-greengrass-ml-sample-app$ curl http://localhost:3000/
-```
-
-The SAM CLI reads the application template to determine the API's routes and the functions that they invoke. The `Events` property on each function's definition includes the route and method for each path.
-
-```yaml
-Events:
-  HelloWorld:
-    Type: Api
-    Properties:
-      Path: /hello
-      Method: get
-```
-
-## Add a resource to your application
-
-The application template uses AWS Serverless Application Model (AWS SAM) to define application resources. AWS SAM is an extension of AWS CloudFormation with a simpler syntax for configuring common serverless application resources such as functions, triggers, and APIs. For resources not included in [the SAM specification](https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md), you can use standard [AWS CloudFormation](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-template-resource-type-ref.html) resource types.
-
-## Fetch, tail, and filter Lambda function logs
-
-To simplify troubleshooting, SAM CLI has a command called `sam logs`. `sam logs` lets you fetch logs generated by your deployed Lambda function from the command line. In addition to printing the logs on the terminal, this command has several nifty features to help you quickly find the bug.
-
-`NOTE`: This command works for all AWS Lambda functions; not just the ones you deploy using SAM.
-
-```bash
-greengrass-ml-sample-app$ sam logs -n HelloWorldFunction --stack-name greengrass-ml-sample-app --tail
-```
-
-You can find more information and examples about filtering Lambda function logs in the [SAM CLI Documentation](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-logging.html).
-
-## Unit tests
-
-Tests are defined in the `tests` folder in this project. Use PIP to install the [pytest](https://docs.pytest.org/en/latest/) and run unit tests.
-
-```bash
-greengrass-ml-sample-app$ pip install pytest pytest-mock --user
-greengrass-ml-sample-app$ python -m pytest tests/ -v
-```
-
-## Cleanup
-
-To delete the sample application that you created, use the AWS CLI. Assuming you used your project name for the stack name, you can run the following:
-
-```bash
-aws cloudformation delete-stack --stack-name greengrass-ml-sample-app
-```
-
-## Resources
-
-See the [AWS SAM developer guide](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html) for an introduction to SAM specification, the SAM CLI, and serverless application concepts.
-
-Next, you can use AWS Serverless Application Repository to deploy ready to use Apps that go beyond hello world samples and learn how authors developed their applications: [AWS Serverless Application Repository main page](https://aws.amazon.com/serverless/serverlessrepo/)
+TODO: explanation of the sample

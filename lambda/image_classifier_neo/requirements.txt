@@ -1,0 +1,4 @@
+requests
+greengrasssdk
+Pillow
+dlr==1.1
