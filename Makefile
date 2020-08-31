@@ -1,12 +1,10 @@
 BUCKET="ml-gg-deployment-sample"
 MY_KEY_PAIR=iot-ml-sample
-MY_KEY_File=~/.ssh/iot-ml-sample-.pem
+MY_KEY_File=~/.ssh/iot-ml-sample.pem
 
 # Do not change unless you specified a different location during build
 MODEL_PACKAGE_TF_FULL="s3://${BUCKET}/models/mobilenet-keras-with-libs/model-package.tar.gz"
 MODEL_PACKAGE_NEO="s3://${BUCKET}/models/mobilenet-neo/model-ml_c5.tar.gz"
-
-
 
 build:
 	sam build --use-container
