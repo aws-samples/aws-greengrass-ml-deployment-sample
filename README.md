@@ -122,14 +122,16 @@ make deploy
 
 ### What is being deployed
 
-This sample will deploy a fully functioning Greengrass core deployed on a EC2 instance with 3 lambda functions which have a image classification model deployed. 
+This sample will deploy a fully functioning Greengrass core deployed on a EC2 instance with 3 lambda functions which each have a image classification model deployed.
 
-There are 3 variants of lambda functions which deploy a MobileNet model for image classification:
+There are 3 variants of lambda functions:
 
 - a lambda function with a compiled SageMaker Neo model, which includes all required artifacts within the lambda deployment itself
 - two lambda function using a plain Tensorflow model for inference. The model and dependencies are imported dynamically using a ml resource. One function runs with and the other without containerization.
 
-Here is an overview of the deployment process and infrastructure being deployed.
+The deployment of the Greengrass group and core is fully automated using AWS Cloudformation and AWS SAM. Check out [this blogpost](https://aws.amazon.com/blogs/iot/automating-aws-iot-greengrass-setup-with-aws-cloudformation/) to learn more about automating your Greengrass setup using AWS Cloudformation.
+
+Here is an overview of the deployment process and infrastructure that is being deployed.
 
 ![doc/architecture.png](doc/architecture.png)
 
