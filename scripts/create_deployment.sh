@@ -9,4 +9,19 @@ GROUP_VERSION_ID=$(aws greengrass list-group-versions --group-id ${GG_GROUP_ID} 
 # strip double quotes
 GROUP_VERSION_ID=$(echo $GROUP_VERSION_ID | tr -d '"')
 # start deployment
-aws greengrass create-deployment --group-id ${GG_GROUP_ID} --group-version-id ${GROUP_VERSION_ID} --deployment-type NewDeployment
+DEPLOYMENT_ID=$(aws greengrass create-deployment --group-id ${GG_GROUP_ID} --group-version-id ${GROUP_VERSION_ID} --deployment-type NewDeployment  --query 'DeploymentId' --output=text)
+
+echo "$GG_GROUP_ID , $DEPLOYMENT_ID"
+
+aws greengrass get-deployment-status --deployment-id "$DEPLOYMENT_ID" --group-id "$GG_GROUP_ID"
+
+while true
+do
+  DEPLOY_STATUS=$(aws greengrass get-deployment-status --deployment-id "$DEPLOYMENT_ID" --group-id "$GG_GROUP_ID" --query 'DeploymentStatus' --output=text)
+  echo "Current Deployment status is $DEPLOY_STATUS"
+  if [ ! "$DEPLOY_STATUS" == "BUILDING" ] && [ ! "$DEPLOY_STATUS" == "InProgress" ];then
+   
+   echo "Finished deployment with status $DEPLOY_STATUS" && exit
+  fi
+sleep 5
+done
