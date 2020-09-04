@@ -26,7 +26,7 @@ Depending on size and and update frequency there are several options you can pic
 
 ### Deploying the trained ML Model
 
-The machine learning model can be included as part of the lambda function deployment package itself or deployed using a ["ML resources"](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) in AWS Greengrass.
+The machine learning model can be included as part of the AWS Lambda function deployment package itself or deployed using a ["ML resources"](https://docs.aws.amazon.com/greengrass/latest/developerguide/ml-inference.html) in AWS Greengrass.
 
 Using ML resources is usually the preferred way, as:
 
@@ -35,8 +35,10 @@ Using ML resources is usually the preferred way, as:
 
 ### Deploying the inference logic
 
-The inference code itself is deployed as part of the [AWS Lambda function](https://docs.aws.amazon.com/greengrass/latest/developerguide/lambda-functions.html). It uses a machine learning library to call the model for inference and returns the results as required within the business context. In a production setting the deployment of the lambda function should be automated ideally using infrastructure as code (IaC). A common tool particularly when automating the deployment of lambda functions is [AWS SAM](https://github.com/awslabs/serverless-application-model).
-AWS SAM makes it easy to organize all required resources in a single stack and has a lot of best-practices for deployment built-in.
+The inference code itself can be deployed either as a AWS-provides Greengrass connector (e.g. for [image classification](https://docs.aws.amazon.com/greengrass/latest/developerguide/image-classification-connector.html) or [object detection](https://docs.aws.amazon.com/greengrass/latest/developerguide/obj-detection-connector.html)) or as part of the [AWS Lambda function](https://docs.aws.amazon.com/greengrass/latest/developerguide/lambda-functions.html).
+
+This sample is about deplyoing the inference code in a AWS Lambda function. That AWS Lambda function uses a machine learning library to call the model for inference and returns the results as required within the business context. In a production setting the deployment of the lambda function should be automated by describing infrastructure as code. A common tool particularly when automating the deployment of AWS Lambda functions is [AWS SAM](https://github.com/awslabs/serverless-application-model).
+AWS SAM makes it easy to organize all required resources in a single stack and has best-practices for deployment built-in.
 
 ### Deploying machine learning libraries
 
@@ -91,21 +93,24 @@ The Python interpreter then uses the environment variable PYTHONPATH to look for
 
 ## Implementation sample
 
+This repository contains a sample demonstrating various options for inference deployment using AWS IoT Greengrass core. In this section, we will describe the steps which you need to perform to run the sample in your AWS account.
+
 ### Prerequisites
 
+- AWS Account
 - [AWS CLI](https://aws.amazon.com/cli/) - AWS Command Line Interface
 - [AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html) including Docker
-- Tested on MacOS but should work on any bash/zsh environment
+- Tested on MacOS but should work on any Linux environment
 
 ### Getting started
 
-- Clone this repository to your local machine 
+1. Clone this repository to your local machine
 
 ```bash
 git clone https://github.com/aws-samples/gg-ml-deployment-sample
 ```
 
-- in [Makefile](Makefile) edit the first two lines with a EC2 key pair name and the location of the SSK key .pem file on your file system. This key can be used to access the Greengrass core instance later!
+2. in [Makefile](Makefile) edit the first two lines with a EC2 key pair name and the location of the SSK key .pem file on your file system. This key can be used to access the Amazon EC2 instance running AWS IoT Greengrass Core later.
 
 ```make
 MY_KEY_PAIR=iot-ml-sample
@@ -122,12 +127,12 @@ make deploy
 
 ### What is being deployed
 
-This sample will deploy a fully functioning Greengrass core deployed on a EC2 instance with 3 lambda functions which each have a image classification model deployed.
+This sample will configure and deploy an AWS IoT Greengrass Group on an Amazon EC2 instance. The AWS IoT Greengrass Group will include 3 AWS Lambda functions which each have a image classification model.
 
-There are 3 variants of lambda functions:
+There are 3 variants of AWS Lambda functions:
 
-- a lambda function with a compiled SageMaker Neo model, which includes all required artifacts within the lambda deployment itself
-- two lambda function using a plain Tensorflow model for inference. The model and dependencies are imported dynamically using a ml resource. One function runs with and the other without containerization.
+- an AWS Lambda function with a compiled SageMaker Neo model, which includes all required artifacts within the lambda deployment itself
+- two AWS Lambda functions using a plain Tensorflow model for inference. The model and dependencies are imported dynamically using a ml resource. One function runs with and the other without containerization.
 
 The deployment of the Greengrass group and core is fully automated using AWS Cloudformation and AWS SAM. Check out [this blogpost](https://aws.amazon.com/blogs/iot/automating-aws-iot-greengrass-setup-with-aws-cloudformation/) to learn more about automating your Greengrass setup using AWS Cloudformation.
 
@@ -135,7 +140,7 @@ Here is an overview of the deployment process and infrastructure that is being d
 
 ![doc/architecture.png](doc/architecture.png)
 
-The 3 lambda functions showcase 3 different use cases:
+The 3 AWS Lambda functions showcase 3 different use cases:
 
 #### Edge optimized model
 
@@ -155,7 +160,6 @@ Similar to the previous function. However the function runs outside of a contain
 
 ![tensorflow-no-container.png](doc/tensorflow-no-container.png)
 
-
 ### Testing the example
 
 To test the deployment is working correctly, you can send an inference request to the lambda functions. To do this:
@@ -164,36 +168,45 @@ To test the deployment is working correctly, you can send an inference request t
 2. In the services dropdown select IoT Core
 3. Select Test in the left navigation
 
-    ![aws_iot_console.png](doc/aws_iot_console.png)
+   ![aws_iot_console.png](doc/aws_iot_console.png)
 
 4. Type in `gg_ml_sample/out` as subscription topic and select `Subscribe to topic`
 5. Type in `gg_ml_samle` as the topic and following JSON as input:
 
-    ```json
-    {
-    "image": "http://farm4.static.flickr.com/3021/2787796908_3eeb73f06b.jpg"
-    }
-    ```
+   ```json
+   {
+     "image": "http://farm4.static.flickr.com/3021/2787796908_3eeb73f06b.jpg"
+   }
+   ```
 
-    Note the example above uses a cute dog picture as input, however feel free to paste in your own picture URL here.
+   Note the example above uses a cute dog picture as input, however feel free to paste in your own picture URL here.
 
-6. You should see 3 results similar to this, each coming from a different function:
+6. You should see 3 results similar to this, each coming from a different AWS Lambda function:
 
-    ```json
-    {
-    "image": "http://farm4.static.flickr.com/3021/2787796908_3eeb73f06b.jpg",
-    "function": "arn:aws:lambda:eu-west-1:<acc-id>:function:gg-ml-sample-ImageClassifierFunctionNeo-16Q0NGPFA8KII:1",
-    "result": "Tibetan terrier"
-    }
-    ```
+   ```json
+   {
+     "image": "http://farm4.static.flickr.com/3021/2787796908_3eeb73f06b.jpg",
+     "function": "arn:aws:lambda:eu-west-1:<acc-id>:function:gg-ml-sample-ImageClassifierFunctionNeo-16Q0NGPFA8KII:1",
+     "result": "Tibetan terrier"
+   }
+   ```
 
 ### Troubleshooting tips
 
 - if deployment of the Cloudformation stack fails, check the events for the stack in the Cloudformation console
 - If deployment ran successful, but you can't see the results above, check the logs of the lambda functions. To check the logs:
-    - Run `make ssh` to connect to the instance
-    - Switch to root using `sudo su -``
-    - you can find the logs at `/greengrass/ggc/var/log/user/<region>/<account_id>/<functionname-function-id>.log`
+  - Run `make ssh` to connect to the instance
+  - Switch to root using `sudo su -``
+  - you can find the logs at `/greengrass/ggc/var/log/user/<region>/<account_id>/<functionname-function-id>.log`
 
+### What's next
 
+Here are some ideas to inspire your further learning activities:
 
+1.Dive deeper into coding of inferenece by reviewing a soure code:
+
+- [Edge optimized model](lambda/image_classifier_neo)
+- [Full Tensorflow model - containerized ](lambda/image_classifier_container)
+- [Full Tensorflow model - non containerized](lambda/image_classifier_no_container)
+
+2. Review the AWS SAM (template)[template.yaml]
