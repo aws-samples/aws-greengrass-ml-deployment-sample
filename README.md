@@ -144,7 +144,7 @@ The 3 AWS Lambda functions showcase 3 different use cases:
 
 #### Edge optimized model
 
-This function deploys a [MobileNetV2](https://arxiv.org/abs/1801.04381) image classifier which was trained using Keras and Tensorflow and then compiled using [SageMaker NEO](https://aws.amazon.com/sagemaker/neo/). To see how the model was compiled, check pout this [notebook](notebooks/02-Compile-Neo-Model.ipynb). The compiled model, its dependencies and the inference code are deplyoed using a single AWS lambda deployment package:
+This function deploys a [MobileNetV2](https://arxiv.org/abs/1801.04381) image classifier which was trained using Keras and Tensorflow and then compiled using [SageMaker NEO](https://aws.amazon.com/sagemaker/neo/). To see how the model was compiled, check out this [notebook](notebooks/02-Compile-Neo-Model.ipynb). The compiled model, its dependencies and the inference code are deplyoed using a single AWS lambda deployment package:
 
 ![neo-function.png](doc/neo-function.png)
 
@@ -209,4 +209,6 @@ Here are some ideas to inspire your further learning activities:
 - [Full Tensorflow model - containerized ](lambda/image_classifier_container)
 - [Full Tensorflow model - non containerized](lambda/image_classifier_no_container)
 
-2. Review the AWS SAM (template)[template.yaml]
+2. Review the AWS SAM [template](template.yaml)
+
+3. To update and redeploy ML models, please review this [Jupyter notebook](notebooks/02-Compile-Neo-Model.ipynb). You can use [Amazon Sage Maker notebook instances](https://docs.aws.amazon.com/sagemaker/latest/dg/nbi.html) to load and execute commands in this notebook.
