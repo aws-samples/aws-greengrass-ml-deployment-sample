@@ -203,7 +203,7 @@ To test the deployment is working correctly, you can send an inference request t
 
 Here are some ideas to inspire your further learning activities:
 
-1.Dive deeper into coding of inferenece by reviewing a soure code:
+1. Dive deeper into coding of inferenece by reviewing a soure code:
 
 - [Edge optimized model](lambda/image_classifier_neo)
 - [Full Tensorflow model - containerized ](lambda/image_classifier_container)
