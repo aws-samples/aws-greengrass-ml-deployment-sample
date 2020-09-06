@@ -1,6 +1,7 @@
 #!/bin/bash 
-[ -z "$1" ] && echo "Please prove greengrass group name as parameter" && exit 1
+# This script creates a greengrass deployment and waites until deployment is finished
 
+[ -z "$1" ] && echo "Please provide greengrass group name as parameter" && exit 1
 GG_GROUP_NAME="$1"
 
 GG_GROUP_ID=$(aws greengrass list-groups --query "Groups[?Name=='${GG_GROUP_NAME}']".Id --output=text)
@@ -11,10 +12,7 @@ GROUP_VERSION_ID=$(echo $GROUP_VERSION_ID | tr -d '"')
 # start deployment
 DEPLOYMENT_ID=$(aws greengrass create-deployment --group-id ${GG_GROUP_ID} --group-version-id ${GROUP_VERSION_ID} --deployment-type NewDeployment  --query 'DeploymentId' --output=text)
 
-echo "$GG_GROUP_ID , $DEPLOYMENT_ID"
-
-aws greengrass get-deployment-status --deployment-id "$DEPLOYMENT_ID" --group-id "$GG_GROUP_ID"
-
+# Wait for deployment to finish
 while true
 do
   DEPLOY_STATUS=$(aws greengrass get-deployment-status --deployment-id "$DEPLOYMENT_ID" --group-id "$GG_GROUP_ID" --query 'DeploymentStatus' --output=text)
