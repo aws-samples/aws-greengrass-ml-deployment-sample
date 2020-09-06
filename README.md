@@ -127,42 +127,40 @@ make deploy
 
 ### What is being deployed
 
-This sample will configure and deploy an AWS IoT Greengrass Group on an Amazon EC2 instance. The AWS IoT Greengrass Group will include 3 AWS Lambda functions which each have a image classification model.
+This sample will configure and deploy an AWS IoT Greengrass Group on an Amazon EC2 instance. The AWS IoT Greengrass Group will include 3 AWS Lambda functions which each use a [MobileNetV2](https://arxiv.org/abs/1801.04381) image classification model architecture for inference.
 
 There are 3 variants of AWS Lambda functions:
 
-- an AWS Lambda function with a compiled SageMaker Neo model, which includes all required artifacts within the lambda deployment itself
+- one AWS Lambda function with a compiled SageMaker Neo model, which includes all required artifacts within the lambda deployment itself
 - two AWS Lambda functions using a plain Tensorflow model for inference. The model and dependencies are imported dynamically using a ml resource. One function runs with and the other without containerization.
 
 The deployment of the Greengrass group and core is fully automated using AWS Cloudformation and AWS SAM. Check out [this blogpost](https://aws.amazon.com/blogs/iot/automating-aws-iot-greengrass-setup-with-aws-cloudformation/) to learn more about automating your Greengrass setup using AWS Cloudformation.
 
-Here is an overview of the deployment process and infrastructure that is being deployed.
+Here is high level overview of the deployment process and the infrastructure which is being deployed.
 
 ![doc/architecture.png](doc/architecture.png)
 
-The 3 AWS Lambda functions showcase 3 different use cases:
+The 3 AWS Lambda functions showcase 2 different use cases:
 
 #### Edge optimized model
 
-This function deploys a [MobileNetV2](https://arxiv.org/abs/1801.04381) image classifier which was trained using Keras and Tensorflow and then compiled using [SageMaker NEO](https://aws.amazon.com/sagemaker/neo/). To see how the model was compiled, check out this [notebook](notebooks/02-Compile-Neo-Model.ipynb). The compiled model, its dependencies and the inference code are deplyoed using a single AWS lambda deployment package:
+This function deploys a [MobileNetV2](https://arxiv.org/abs/1801.04381) image classifier which was trained using Keras and Tensorflow and then compiled using [SageMaker NEO](https://aws.amazon.com/sagemaker/neo/). To see how the model was compiled, check out this [notebook](notebooks/02-Compile-Neo-Model.ipynb). The compiled model, its dependencies and the inference code are deployed using a single AWS lambda deployment package:
 
 ![neo-function.png](doc/neo-function.png)
 
-#### Full Tensorflow model - containerized
+#### Full Tensorflow model
 
-Similar to the first function we are deploying a Tensorflow model here. However we will pull in the model as well as the Tensorflow library and the rest of the dependencies using an ML resource. The function is containerized in AWS Greengrass.
+Similar to the first function we are deploying a Tensorflow model here. However we will pull in the model as well as the Tensorflow library and the rest of the dependencies using an ML resource. In this example there are two flavors of this function being deployed. One function is running in containerized mode on the core device, the other without.
 
-![tensorflow-container.png](doc/tensorflow-container.png)
-
-#### Full Tensorflow model - non containerized
-
-Similar to the previous function. However the function runs outside of a container in Greengrass.
-
-![tensorflow-no-container.png](doc/tensorflow-no-container.png)
+![tensorflow-function.png](doc/tensorflow-function.png)
 
 ### Testing the example
 
-To test the deployment is working correctly, you can send an inference request to the lambda functions. To do this:
+To test the deployment is working correctly, you can send an inference request containing an image url to each of the lambda functions. You will get a classification result as response. Following image shows the inference flow in detail:
+
+![inference.png](doc/inference.png)
+
+Follow these steps to try the flow for yourself:
 
 1. Log into AWS console
 2. In the services dropdown select IoT Core
@@ -171,7 +169,7 @@ To test the deployment is working correctly, you can send an inference request t
    ![aws_iot_console.png](doc/aws_iot_console.png)
 
 4. Type in `gg_ml_sample/out` as subscription topic and select `Subscribe to topic`
-5. Type in `gg_ml_samle` as the topic and following JSON as input:
+5. Type in `gg_ml_sample/in` as the topic and following JSON as input:
 
    ```json
    {
@@ -203,7 +201,7 @@ To test the deployment is working correctly, you can send an inference request t
 
 Here are some ideas to inspire your further learning activities:
 
-1. Dive deeper into coding of inferenece by reviewing a soure code:
+1. Dive deeper into coding of inference by reviewing the source code:
 
 - [Edge optimized model](lambda/image_classifier_neo)
 - [Full Tensorflow model - containerized ](lambda/image_classifier_container)
