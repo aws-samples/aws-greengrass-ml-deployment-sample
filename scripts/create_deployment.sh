@@ -17,7 +17,7 @@ while true
 do
   DEPLOY_STATUS=$(aws greengrass get-deployment-status --deployment-id "$DEPLOYMENT_ID" --group-id "$GG_GROUP_ID" --query 'DeploymentStatus' --output=text)
   echo "Current Deployment status is $DEPLOY_STATUS"
-  if [ ! "$DEPLOY_STATUS" == "BUILDING" ] && [ ! "$DEPLOY_STATUS" == "InProgress" ];then
+  if [ ! "$DEPLOY_STATUS" == "Building" ] && [ ! "$DEPLOY_STATUS" == "InProgress" ];then
    
    echo "Finished deployment with status $DEPLOY_STATUS" && exit
   fi
