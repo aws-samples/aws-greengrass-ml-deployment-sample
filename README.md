@@ -113,8 +113,8 @@ git clone https://github.com/aws-samples/gg-ml-deployment-sample
 2. in [Makefile](Makefile) edit the first two lines with a EC2 key pair name and the location of the SSK key .pem file on your file system. This key can be used to access the Amazon EC2 instance running AWS IoT Greengrass Core later.
 
 ```make
-MY_KEY_PAIR=iot-ml-sample
-MY_KEY_File=~/.ssh/iot-ml-sample.pem
+KEY_PAIR_NAME=iot-ml-sample
+KEY_PAIR_FILE=~/.ssh/iot-ml-sample.pem
 ```
 
 - If you don't already have a SSK key pair which you would like to use, you can find instruction on how to create a new key pair [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html)

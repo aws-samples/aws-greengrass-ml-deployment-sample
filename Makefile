@@ -1,7 +1,7 @@
 # This is the EC2 Key pair name which can be used to connect to the greengrass core
-MY_KEY_PAIR=iot-ml-sample
+KEY_PAIR_NAME=iot-ml-sample
 # This is the corresponding EC2 Key pair file location on your local disk
-MY_KEY_File=~/.ssh/iot-ml-sample.pem
+KEY_PAIR_FILE=~/.ssh/iot-ml-sample.pem
 
 ######################################
 # Do not change below unless required#
@@ -18,7 +18,7 @@ MODEL_PACKAGE_NEO="s3://${ML_RESOURCE_BUCKET}/models/mobilenet-neo/model-ml_c5.t
 deploy: build
 	scripts/ensure_deployment_bucket_exists.sh ${DEPLOYMENT_BUCKET}
 	scripts/reset_deployment.sh
-	sam deploy --s3-bucket ${DEPLOYMENT_BUCKET} --parameter-overrides "MLResourceLocationTFFull=${MODEL_PACKAGE_TF_FULL} MLResourceLocationNeo=${MODEL_PACKAGE_NEO} myKeyPair=${MY_KEY_PAIR}"
+	sam deploy --s3-bucket ${DEPLOYMENT_BUCKET} --parameter-overrides "MLResourceLocationTFFull=${MODEL_PACKAGE_TF_FULL} MLResourceLocationNeo=${MODEL_PACKAGE_NEO} myKeyPair=${KEY_PAIR_NAME}"
 	scripts/create_deployment.sh gg_ml_sample
 
 build:
@@ -30,4 +30,4 @@ destroy:
     --stack-name gg-ml-sample
 
 ssh:
-	scripts/ssh_gg_instance.sh ${MY_KEY_File}
+	scripts/ssh_gg_instance.sh ${KEY_PAIR_NAME} ${KEY_PAIR_FILE}
