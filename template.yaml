@@ -337,7 +337,7 @@ Resources:
       SecurityGroupIds: !Split [",", !GetAtt InstanceSecurityGroup.GroupId]
       Tags:
        - Key: Name
-         Value: !Join ["-", [ "Greengrass Core Blog ", !Ref CoreName] ]
+         Value: "GGCoreInstance"
       SubnetId: !Ref SubnetAPublic
       UserData:
         # All the steps to install dependencies and create the specific
