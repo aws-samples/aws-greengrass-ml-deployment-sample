@@ -1,3 +1,8 @@
+"""
+This lambda function controls a cloudformation custom resource which
+creates a thing and necessary key and certificates on stack creation.
+On stack deletion, this lambda ensures certificates and policies get deleted properly.
+"""
 import sys
 import json
 import logging
@@ -8,7 +13,7 @@ import cfnresponse
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
-policyDocument = {
+POLICY_DOCUMENT = {
     'Version': '2012-10-17',
     'Statement': [
         {
@@ -31,7 +36,7 @@ def handler(event, context):
         logger.info('Received event: {}'.format(json.dumps(event)))
         result = cfnresponse.FAILED
         client = boto3.client('iot')
-        thingName=event['ResourceProperties']['ThingName']
+        thingName = event['ResourceProperties']['ThingName']
         if event['RequestType'] == 'Create':
             thing = client.create_thing(
                 thingName=thingName
@@ -45,7 +50,7 @@ def handler(event, context):
             privateKey = response['keyPair']['PrivateKey']
             client.create_policy(
                 policyName='{}-full-access'.format(thingName),
-                policyDocument=json.dumps(policyDocument)
+                policyDocument=json.dumps(POLICY_DOCUMENT)
             )
             response = client.attach_policy(
                 policyName='{}-full-access'.format(thingName),
@@ -55,13 +60,14 @@ def handler(event, context):
                 thingName=thingName,
                 principal=certArn,
             )
-            logger.info('Created thing: %s, cert: %s and policy: %s' % 
-                (thingName, certId, '{}-full-access'.format(thingName)))
+            logger.info('Created thing: %s, cert: %s and policy: %s' %
+                        (thingName, certId, '{}-full-access'.format(thingName)))
             result = cfnresponse.SUCCESS
             responseData['certificateId'] = certId
             responseData['certificatePem'] = certPem
             responseData['privateKey'] = privateKey
-            responseData['iotEndpoint'] = client.describe_endpoint(endpointType='iot:Data-ATS')['endpointAddress']
+            responseData['iotEndpoint'] = client.describe_endpoint(
+                endpointType='iot:Data-ATS')['endpointAddress']
         elif event['RequestType'] == 'Update':
             logger.info('Updating thing: %s' % thingName)
             result = cfnresponse.SUCCESS
@@ -97,6 +103,7 @@ def handler(event, context):
     except ClientError as e:
         logger.error('Error: {}'.format(e))
         result = cfnresponse.FAILED
-    logger.info('Returning response of: {}, with result of: {}'.format(result, responseData))
+    logger.info('Returning response of: {}, with result of: {}'.format(
+        result, responseData))
     sys.stdout.flush()
     cfnresponse.send(event, context, result, responseData)
