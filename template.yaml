@@ -32,8 +32,8 @@ Parameters:
     Type: "AWS::EC2::KeyPair::KeyName"
   
 Mappings:
-  # If Greengrass becomes available in other regions, add the x86 AMI Id for the
-  # image description:  "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20200611"
+  # Untested for other regions, however feel free to add the AMI Id for the 
+  # following image in your region:  "ubuntu/images/hvm-ssd/ubuntu-bionic-18.04-amd64-server-20200611"
   RegionMap: 
     us-east-1: 
       "HVM": "ami-0ac80df6eff0e70b5"
@@ -396,25 +396,6 @@ Resources:
 
           cd /greengrass/certs/
           wget -O root.ca.pem https://www.amazontrust.com/repository/AmazonRootCA1.pem
-          # cd /tmp
-          # # Create Greengrass systemd file - thanks to: https://gist.github.com/matthewberryman/fa21ca796c3a2e0dfe8224934b7b055c
-          # cat <<EOT > greengrass.service
-          # [Unit]
-          # Description=greengrass daemon
-          # After=network.target
-
-          # [Service]
-          # ExecStart=/greengrass/ggc/core/greengrassd start
-          # Type=simple
-          # RestartSec=2
-          # Restart=always
-          # User=root
-          # PIDFile=/var/run/greengrassd.pid
-
-          # [Install]
-          # WantedBy=multi-user.target
-          # EOT
-          # cp greengrass.service /etc/systemd/system
           systemctl enable greengrass.service
           reboot
 
@@ -529,10 +510,7 @@ Resources:
             Action:
             - iot:*
             Resource: "*"
-          - Effect: Allow
-            Action:
-            - s3:*
-            Resource: "*"
+
 
 Outputs:
   # Emit values needed for deployment status (e.g., where to SSH to)
