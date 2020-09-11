@@ -10,10 +10,10 @@ Globals:
 
 Parameters:
   MLResourceLocationTFFull:
-    Description: The S3 url for the machine learning resource to be attached
+    Description: The S3 url for the machine learning resource to be attached which contains the full tensorflow deployment package
     Type: String
   MLResourceLocationNeo:
-    Description: The S3 url for the machine learning resource to be attached
+    Description: The S3 url for the machine learning resource to be attached which contains the SageMaker NEO model
     Type: String    
   CoreName:
     Description: Green Core name to be created. A "Thing" with be created with _Core appended to the name
