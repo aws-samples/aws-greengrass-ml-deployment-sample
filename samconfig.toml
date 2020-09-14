@@ -1,0 +1,8 @@
+version = 0.1
+[default]
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "gg-ml-sample"
+s3_prefix = "gg-ml-sample"
+capabilities = "CAPABILITY_IAM"
+

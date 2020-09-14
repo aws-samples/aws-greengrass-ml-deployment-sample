@@ -1,0 +1,4 @@
+requests
+greengrasssdk
+Pillow
+https://neo-ai-dlr-release.s3-us-west-2.amazonaws.com/v1.3.0/a1-aarch64-ubuntu18_04-glibc2_27-libstdcpp3_4/dlr-1.3.0-py3-none-any.whl
